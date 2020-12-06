@@ -1,0 +1,94 @@
+{
+    "N": 2,
+    "maxEval": 20000.0,
+    "pn": 2,
+    "oracleInopts": [],
+    "nOut": 1,
+    "plotting": false,
+    "verboseModulo": 1000.0,
+    "savingModulo": 100.0,
+    "bSaving": true,
+    "bSaveCov": true,
+    "lastSaveAll": false,
+    "unfeasibleSave": false,
+    "numLast": "max((self.maxEval - 1e3*self.N),self.maxEval * 0.7)",
+    "averageCovNum": 100,
+    "valP": 0.36787944117144233,
+    "maxMeanSize": 2000,
+    "windowSizeEval": "min(110/self.valP,self.maxMeanSize)",
+    "r": 1,
+    "initQ": [
+        [
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0
+        ]
+    ],
+    "initC": [
+        [
+            1.0,
+            0.0
+        ],
+        [
+            0.0,
+            1.0
+        ]
+    ],
+    "maxR": "np.inf",
+    "minR": 0,
+    "maxCond": 2e+20,
+    "N_mu": 5.43656365691809,
+    "N_C": 5.944999999999999,
+    "popSize": "max(4 + np.floor(3 * np.log(self.N)), np.floor(2 / self.valP))",
+    "beta": "3*0.2/((self.N+1.3)**2+self.valP*self.popSize)",
+    "ss": "1 + self.beta*(1-self.valP)",
+    "sf": "1 - self.beta*(self.valP)",
+    "mueff": 1,
+    "ccov1": "3*0.2/((self.N+1.3)**2+self.mueff)",
+    "ccovmu": "min(1-self.ccov1, 3*0.2*(self.mueff-2+1/self.mueff) / ((self.N+2)**2+self.mueff*0.2))",
+    "cp": "1/np.sqrt(self.N)",
+    "hitP_adapt_cond": true,
+    "hitP_adapt": {
+        "Pvec": [
+            0.35,
+            0.15,
+            0.06,
+            0.03,
+            0.01
+        ],
+        "fixedSchedule": true,
+        "maxEvalSchedule": [
+            0.5,
+            0.125,
+            0.125,
+            0.125,
+            0.125
+        ],
+        "numLastSchedule": [
+            0.5,
+            0.75,
+            0.75,
+            0.75,
+            0.75
+        ],
+        "testEvery": 48.92907291226281,
+        "stepSize": {
+            "meanSize": "min(18 / self.valP, self.maxMeanSize)",
+            "deviation": 0.001
+        },
+        "hitP": {
+            "meanSize": "min(18 / self.valP, self.maxMeanSize)",
+            "deviation": 0.001
+        },
+        "VolApprox": {
+            "meanSize": "min(30 / self.valP, self.maxMeanSize)",
+            "deviation": 0.001
+        },
+        "testStart": "max([2*self.hitP_adapt['stepSize']['meanSize'], 2*self.hitP_adapt['hitP']['meanSize'], 2*self.hitP_adapt['VolApprox']['meanSize']])",
+        "meanOfLast": 0.25,
+        "deviation_stop": 0.01
+    }
+}

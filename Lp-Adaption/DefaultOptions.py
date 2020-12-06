@@ -1,5 +1,5 @@
 import numpy as np
-
+import json
 
 class DefaultOptions:
     """
@@ -7,6 +7,7 @@ class DefaultOptions:
     All Parameters/options, which are not specified but necessary when starting the
     algorithm are taken from the default.
     All Options and their description can be additionally found in the README
+    Options that are dependent on other options are written as string which is finally evaluated into the value
     #TODO: write all aptions with explanation to README
     """
 
@@ -52,7 +53,7 @@ class DefaultOptions:
         self.unfeasibleSave = False
 
         #how many of numLast elements are used to get average mu and r
-        self.numLast = max((self.maxEval - 1e3*N),self.maxEval * 0.7)
+        self.numLast = "max((self.maxEval - 1e3*self.N),self.maxEval * 0.7)"
 
         #how many covariances should be used to get average covariance
         self.averageCovNum = 100
@@ -66,16 +67,16 @@ class DefaultOptions:
         self.maxMeanSize = 2000
 
         # size of moving window to get empirical hitting probability (in number of evaluations)
-        self.windowSizeEval = min(110/self.valP,self.maxMeanSize)
+        self.windowSizeEval = "min(110/self.valP,self.maxMeanSize)"
 
         # Initial Covariance
         self.r = 1
 
         #init Cholesky and Corvariance matrix
-        self.initQ = np.eye(N)
-        self.initC = np.eye(N)
+        self.initQ = np.eye(N).tolist()
+        self.initC = np.eye(N).tolist()
 
-        self.maxR = np.inf
+        self.maxR = "np.inf"
 
         self.minR = 0
 
@@ -88,35 +89,85 @@ class DefaultOptions:
         self.N_C = ((N+1.3)**2+1)/2
 
     #TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
-        self.popSize = max(4 + np.floor(3 * np.log(N)), np.floor(2 / self.valP))
+        self.popSize = "max(4 + np.floor(3 * np.log(self.N)), np.floor(2 / self.valP))"
         # Learning rate beta line 6 in pseudocode
-        self.beta = 3*0.2/((N+1.3)**2+self.valP*self.popSize)
+        self.beta = "3*0.2/((self.N+1.3)**2+self.valP*self.popSize)"
 
         # expansion upon success (f_e line 7)
-        self.ss = 1 + self.beta*(1-self.valP)
+        self.ss = "1 + self.beta*(1-self.valP)"
 
         # Contraction f_c otherwise (line 8)
-        self.sf = 1 - self.beta*(self.valP)
+        self.sf = "1 - self.beta*(self.valP)"
 
         #learning rate rank-one update, when CMA
         #Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
         #mueff hardcoded to one in Lp Adaption, mueff will be changed through the algorithm
         self.mueff = 1
-        self.ccov1 = 3*0.2/((N+1.3)**2+self.mueff)
+        self.ccov1 = "3*0.2/((self.N+1.3)**2+self.mueff)"
 
-        self.ccovmu = min(1-self.ccov1, 3*0.2*(self.mueff-2+1/self.mueff) / ((N+2)**2+self.mueff*0.2))
+        self.ccovmu = "min(1-self.ccov1, 3*0.2*(self.mueff-2+1/self.mueff) / ((self.N+2)**2+self.mueff*0.2))"
 
         #CMA learning constant for rank-one update
-        self.cp = 1/np.sqrt(N)
+        self.cp = "1/np.sqrt(self.N)"
 
-        self.hitP_adapt = False
+        #1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
+        # of interest if hitP_adapt == True
+        self.hitP_adapt_cond = False
 
-        if self.hitP_adapt:
-            self.hitP_adapt_Pvec = [0.35,0.15,0.06,0.03,0.01]
-            self.hitP_adapt_fixedSchedule = True
-            self.hitP_adapt_maxEvalSchedule = [1/2,1/8,1/8,1/8,1/8]
-            self.hitP_adapt_numLastSchedule = [1/2,3/4,3/4,3/4,3/4]
-            #TODO rest parameters for adapting hitting probability!
+        if self.hitP_adapt_cond:
+            self.hitP_adapt = {}
+            self.hitP_adapt['Pvec']=[0.35,0.15,0.06,0.03,0.01]
+            self.hitP_adapt['fixedSchedule'] = True
+            self.hitP_adapt['maxEvalSchedule'] = [1/2,1/8,1/8,1/8,1/8]
+            self.hitP_adapt['numLastSchedule'] = [1/2,3/4,3/4,3/4,3/4]
+            self.hitP_adapt['testEvery'] = min(18/self.valP,self.maxMeanSize)
+
+            self.hitP_adapt['stepSize'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+            self.hitP_adapt['hitP'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+            self.hitP_adapt['VolApprox'] = {'meanSize': "min(30 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+
+            self.hitP_adapt['testStart'] = "max([2*self.hitP_adapt['stepSize']['meanSize']," \
+                                           " 2*self.hitP_adapt['hitP']['meanSize']," \
+                                           " 2*self.hitP_adapt['VolApprox']['meanSize']])"
+
+            self.hitP_adapt['meanOfLast'] = 1/4
+            self.hitP_adapt['deviation_stop'] = 0.01
+
+
+    def adaptOption(self,inopts:dict):
+        '''
+        :param inopts: dictionary of options that differ to the default options, initialized above
+        :return: dict with options
+        '''
+        opt_dict = self.__dict__
+        for option,value in inopts.items():
+            if option in opt_dict.keys():
+                opt_dict[option] = value
+            else:
+                ValueError('Option %s is not an appropriate option for Lp-Adaption')
+        return print(self.evaluateOpts(opt_dict))
+
+
+
+    def evaluateOpts(self, optdict:dict):
+        '''
+        Function that evaluates all options given as a string and evaluates the equation behind them.
+        :param optdict: dictionary of options
+        :return: dictionaries, that contain evaluated parameters
+        #TODO: Maybe options ccov1 and covvmu have to be adaptded concerning the equation. \
+            Thus they should stay and evaluatable string
+        '''
+
+        for opt,value in optdict.items():
+            if type(value) == str:
+                optdict[opt] = eval(value)
+            elif type(value) == dict:
+                optdict[opt] = self.evaluateOpts(value)
+            else:
+                continue
+
+        return optdict
+
 
 
 
