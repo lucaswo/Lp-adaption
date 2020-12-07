@@ -115,41 +115,55 @@ class DefaultOptions:
         self.hitP_adapt_cond = False
 
         if self.hitP_adapt_cond:
-            self.hitP_adapt = {}
-            self.hitP_adapt['Pvec']=[0.35,0.15,0.06,0.03,0.01]
-            self.hitP_adapt['fixedSchedule'] = True
-            self.hitP_adapt['maxEvalSchedule'] = [1/2,1/8,1/8,1/8,1/8]
-            self.hitP_adapt['numLastSchedule'] = [1/2,3/4,3/4,3/4,3/4]
-            self.hitP_adapt['testEvery'] = min(18/self.valP,self.maxMeanSize)
+            self.__invoke_hitP_adaption()
 
-            self.hitP_adapt['stepSize'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
-            self.hitP_adapt['hitP'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
-            self.hitP_adapt['VolApprox'] = {'meanSize': "min(30 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
 
-            self.hitP_adapt['testStart'] = "max([2*self.hitP_adapt['stepSize']['meanSize']," \
-                                           " 2*self.hitP_adapt['hitP']['meanSize']," \
-                                           " 2*self.hitP_adapt['VolApprox']['meanSize']])"
 
-            self.hitP_adapt['meanOfLast'] = 1/4
-            self.hitP_adapt['deviation_stop'] = 0.01
+    def __invoke_hitP_adaption(self):
+        self.hitP_adapt = {}
+        self.hitP_adapt['Pvec'] = [0.35, 0.15, 0.06, 0.03, 0.01]
+        self.hitP_adapt['fixedSchedule'] = True
+        self.hitP_adapt['maxEvalSchedule'] = [1 / 2, 1 / 8, 1 / 8, 1 / 8, 1 / 8]
+        self.hitP_adapt['numLastSchedule'] = [1 / 2, 3 / 4, 3 / 4, 3 / 4, 3 / 4]
+        self.hitP_adapt['testEvery'] = min(18 / self.valP, self.maxMeanSize)
 
+        self.hitP_adapt['stepSize'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+        self.hitP_adapt['hitP'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+        self.hitP_adapt['VolApprox'] = {'meanSize': "min(30 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+
+        self.hitP_adapt['testStart'] = "max([2*self.hitP_adapt['stepSize']['meanSize']," \
+                                       " 2*self.hitP_adapt['hitP']['meanSize']," \
+                                       " 2*self.hitP_adapt['VolApprox']['meanSize']])"
+
+        self.hitP_adapt['meanOfLast'] = 1 / 4
+        self.hitP_adapt['deviation_stop'] = 0.01
 
     def adaptOption(self,inopts:dict):
         '''
         :param inopts: dictionary of options that differ to the default options, initialized above
         :return: dict with options
         '''
-        opt_dict = self.__dict__
         for option,value in inopts.items():
-            if option in opt_dict.keys():
-                opt_dict[option] = value
+            if hasattr(self,option):
+                setattr(self,option,value)
+                # when adpation of hitting probability should be made, the class attributes has to be invoked
+                # Note that the attributes will be invoked when given even if the cond is False
+                if option == 'hitP_adapt_cond' and value == True or option == 'hitP_adapt' and value:
+                    if option == 'hitP_adapt' and value and self.hitP_adapt_cond==False :
+                        UserWarning('You want to initialize the options for the hitting pobability adaption, '
+                                    'although condition is False. We set it for you. You might want to check, whether '
+                                    'you want the options or not.')
+                        self.hitP_adapt_cond = True
+
+                    self.__invoke_hitP_adaption()
             else:
                 ValueError('Option %s is not an appropriate option for Lp-Adaption')
-        return print(self.evaluateOpts(opt_dict))
+        #TODO: maybe the string statements has to be evaluated during the runtime of the algorithm
+        return self.evaluateOpts()
 
 
 
-    def evaluateOpts(self, optdict:dict):
+    def evaluateOpts(self):
         '''
         Function that evaluates all options given as a string and evaluates the equation behind them.
         :param optdict: dictionary of options
@@ -158,15 +172,27 @@ class DefaultOptions:
             Thus they should stay and evaluatable string
         '''
 
-        for opt,value in optdict.items():
+        for opt,value in self.__dict__.items():
             if type(value) == str:
-                optdict[opt] = eval(value)
+                setattr(self,opt,eval(value))
             elif type(value) == dict:
-                optdict[opt] = self.evaluateOpts(value)
+                attr = self.__resolve_dict(getattr(self,opt))
+                setattr(self,opt,attr)
             else:
                 continue
 
-        return optdict
+        return self
+
+    def __resolve_dict(self,attr_dict):
+        for key,value in attr_dict.items():
+            if type(value) == str:
+                attr_dict[key] = eval(value)
+            elif type(value) == dict:
+                attr_dict[key] = self.__resolve_dict(value)
+            else:
+                continue
+        return attr_dict
+
 
 
 

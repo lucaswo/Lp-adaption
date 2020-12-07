@@ -9,4 +9,4 @@ class LpAdaption:
         :param xstart: feasable point to start with
         :param inopts: input options
         '''
-        test =1
+
