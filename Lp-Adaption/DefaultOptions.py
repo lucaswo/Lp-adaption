@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import re
 
 class DefaultOptions:
     """
@@ -83,21 +84,21 @@ class DefaultOptions:
         self.maxCond = 1e20*N
 
         #Mean apdaption weight
-        self.N_mu = np.exp(1)*N
+        self.N_mu = 'np.exp(1)*self.N'
 
         #Matrix adaption weight
         self.N_C = ((N+1.3)**2+1)/2
 
     #TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
-        self.popSize = "max(4 + np.floor(3 * np.log(self.N)), np.floor(2 / self.valP))"
+        self.popSize = "max(4 + np.floor(3 * np.log(self.N)), np.floor(2 /valP))"
         # Learning rate beta line 6 in pseudocode
-        self.beta = "3*0.2/((self.N+1.3)**2+self.valP*self.popSize)"
+        self.beta = "3*0.2/((self.N+1.3)**2+valP*popSize)"
 
         # expansion upon success (f_e line 7)
-        self.ss = "1 + self.beta*(1-self.valP)"
+        self.ss = "1 + beta*(1-self.valP)"
 
         # Contraction f_c otherwise (line 8)
-        self.sf = "1 - self.beta*(self.valP)"
+        self.sf = "1 - beta*(self.valP)"
 
         #learning rate rank-one update, when CMA
         #Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
@@ -105,7 +106,7 @@ class DefaultOptions:
         self.mueff = 1
         self.ccov1 = "3*0.2/((self.N+1.3)**2+self.mueff)"
 
-        self.ccovmu = "min(1-self.ccov1, 3*0.2*(self.mueff-2+1/self.mueff) / ((self.N+2)**2+self.mueff*0.2))"
+        self.ccovmu = "min(1-ccov1, 3*0.2*(mueff-2+1/self.mueff) / ((self.N+2)**2+mueff*0.2))"
 
         #CMA learning constant for rank-one update
         self.cp = "1/np.sqrt(self.N)"
@@ -156,10 +157,12 @@ class DefaultOptions:
                         self.hitP_adapt_cond = True
 
                     self.__invoke_hitP_adaption()
+            if type(value) == str:
+                setattr(self, option, re.sub('self\.','self\.opts\.',value))
             else:
                 ValueError('Option %s is not an appropriate option for Lp-Adaption')
-        #TODO: maybe the string statements has to be evaluated during the runtime of the algorithm
-        return self.evaluateOpts()
+
+        return self
 
 
 
