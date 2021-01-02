@@ -3,10 +3,11 @@ from typing import List,Dict
 import re
 from DefaultOptions import DefaultOptions
 import json
+from scipy.sparse.linalg import arpack
 
 class LpAdaption:
 
-    def __init__(self,oracle:str, xstart:List,inopts:str=''):
+    def __init__(self,oracle:str, xstart:List,inopts=''):
         '''
         :param oracle: Python File in Inputs directory
          containing oracle class with oracle function
@@ -28,10 +29,13 @@ class LpAdaption:
         self.xstart = xstart
         if inopts:
             try:
-                #swap default paramters in inopts
-                with open(inopts, 'r') as inopts_file:
-                    inopts_dict = json.load(inopts_file)
-                    self.opts.adaptOption(inopts_dict)
+                if type(inopts) == str:
+                    #swap default paramters in inopts
+                    with open(inopts, 'r') as inopts_file:
+                        inopts_dict = json.load(inopts_file)
+                        self.opts.adaptOption(inopts=inopts_dict)
+                else:
+                    self.opts.adaptOption(inopts=inopts)
             except:
                 ValueError('Look up your json inopts file for mistakes')
         #rename option strings, so they can be found from this class
@@ -43,40 +47,41 @@ class LpAdaption:
 
     def lpAdaption(self):
         #Test if hitP_adapt was set and the condition not, already caught when merging defopts and inopts
-
+        #Dictionaray of recent parameters
+        p = {}
         #__________SetUp of algorithmic parameters______________
         maxMeanSize = self.opts.maxMeanSize
         if self.opts.hitP_adapt_cond:
-            valP = self.opts.hitP_adapt['PVec']
+            p['valP'] = self.opts.hitP_adapt['PVec']
         else:
-            valP = self.opts.valP
-
-        nOut = self.opts.nOut
-        mueff = 1
-        N_mu = eval(self.opts.N_mu)
-        N_C = self.opts.N_C
-        ccov1 = eval(self.opts.ccov1)
-        ccovmu = eval(self.opts.ccovmu)
-        popSize = eval(self.opts.popSize)
-        cp = self.opts.cp
-        l_expected = np.sqrt(self.N)
-        windowSize = np.ceil(eval(self.opts.windowSizeEval))
-        beta = eval(self.opts.beta)
-        ss = eval(self.opts.ss)
-        sf = eval(self.opts.sf)
-        r = self.opts.r
-        rMax = self.opts.maxR
-        rMin = self.opts.minR
-        condMax = self.opts.maxCond
-        pn = self.opts.pn
-        p_empAll = 0
-        p_empWindow = 0
+            p['valP'] = self.opts.valP
+        #initialize values for the parameters from the options
+        p['nOut'] = self.opts.nOut
+        p['mueff'] = 1
+        p['N_mu'] = self.opts.N_mu
+        p['N_C'] = self.opts.N_C
+        p['ccov1'] = self.opts.ccov1
+        p['ccovmu'] = self.opts.ccovmu
+        p['popSize'] = self.opts.popSize
+        p['cp'] = self.opts.cp
+        p['l_expected'] = np.sqrt(self.N)
+        p['windowSize'] = np.ceil(self.opts.windowSizeEval)
+        p['beta'] = self.opts.beta
+        p['ss'] = self.opts.ss
+        p['sf'] = self.opts.sf
+        p['r'] = self.opts.r
+        p['rMax'] = self.opts.maxR
+        p['rMin'] = self.opts.minR
+        p['condMax'] = self.opts.maxCond
+        p['pn'] = self.opts.pn
+        p['p_empAll'] = 0
+        p['p_empWindow'] = 0
 
         if self.opts.hitP_adapt_cond:
             test=0
             #TODO. Implement adaptable hitting probabilitie
         else:
-            numLast = eval(self.opts.numLast)
+            numLast = self.opts.numLast
             #Check, that numLast is smaller than MaxEval
             if numLast > self.opts.maxEval:
                 numLast = max((self.opts.maxEval - 1e3*self.N),self.opts.maxEval * 0.7)
@@ -87,14 +92,37 @@ class LpAdaption:
         Q = np.array(self.opts.initQ)
         C = np.array(self.opts.initC)
         #C consistent calculated from Q for compairison with specified C
-        C_calc= r**2*(Q*Q)
+        C_calc= p['r']**2*(Q*Q)
         np.testing.assert_equal(C,C_calc,err_msg='Initialized C Matrix is not consistent with Matrix Q.\n'
                                                      'Your Q yields to the following C:'%C_calc)
         #check if C is positiv semidefinit
+        #TODO: Maybe easier way
         [Bo,tmp] = np.linalg.eig(C)
-        
+        tol = 1e-8
+        vals, vecs = arpack.eigsh(C, k=2, which='BE')
+        if not np.all(vals > -tol):
+            ValueError('Covariance Matrix need tobe positiv semidefinit!')
+        elif np.size(C,1) != self.N:
+            ValueError(' C has not the same size as your starting point xstart!')
 
 
+        diagD = np.sqrt(np.diag(tmp))
+        detdiagD = np.prod(diagD)
+        diagD = diagD/(detdiagD**(1/self.N))
+        Q = Bo*(np.tile(diagD,(self.N,1)))
+        r = np.linalg.det(C)**(1/2*self.N)
+        #matlab checks for the same size of C and xstart here again
+        #Anyway, we not cause the check is already above and not in an if/else statement(cause initC and
+        # Q are always provided through default Options)
+
+        [j,eigVals] = np.linalg.eig(Q*np.transpose(Q))
+        condC = np.linalg.cond(Q*np.transpose(Q))
+
+        #___________Setup initial settings_____________
+        #check if xstart is a feasable point
+        xstart_out = self.oracle.oracle(self.xstart)
+        if xstart_out != 1:
+            ValueError('x_start needs to be a feasable point')
 
 
 

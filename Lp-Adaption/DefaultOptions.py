@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import re
-
+import OptionHandler as oh
 class DefaultOptions:
     """
     This class handles all default parameters for the Lp_Adaption.
@@ -54,7 +54,7 @@ class DefaultOptions:
         self.unfeasibleSave = False
 
         #how many of numLast elements are used to get average mu and r
-        self.numLast = "max((self.maxEval - 1e3*self.N),self.maxEval * 0.7)"
+        self.numLast = oh.get_numLast(self.__dict__)
 
         #how many covariances should be used to get average covariance
         self.averageCovNum = 100
@@ -68,7 +68,7 @@ class DefaultOptions:
         self.maxMeanSize = 2000
 
         # size of moving window to get empirical hitting probability (in number of evaluations)
-        self.windowSizeEval = "min(110/self.valP,self.maxMeanSize)"
+        self.windowSizeEval = oh.get_windowSizeEval(self.__dict__)
 
         # Initial Covariance
         self.r = 1
@@ -77,20 +77,20 @@ class DefaultOptions:
         self.initQ = np.eye(N).tolist()
         self.initC = np.eye(N).tolist()
 
-        self.maxR = "np.inf"
+        self.maxR = oh.get_maxR(self)
 
         self.minR = 0
 
         self.maxCond = 1e20*N
 
         #Mean apdaption weight
-        self.N_mu = 'np.exp(1)*self.N'
+        self.N_mu = oh.get_N_mu(self.__dict__)
 
         #Matrix adaption weight
         self.N_C = ((N+1.3)**2+1)/2
 
     #TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
-        self.popSize = "max(4 + np.floor(3 * np.log(self.N)), np.floor(2 /valP))"
+        self.popSize = oh.get_Pop_size(self.__dict__)
         # Learning rate beta line 6 in pseudocode
         self.beta = "3*0.2/((self.N+1.3)**2+valP*popSize)"
 
@@ -104,9 +104,8 @@ class DefaultOptions:
         #Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
         #mueff hardcoded to one in Lp Adaption, mueff will be changed through the algorithm
         self.mueff = 1
-        self.ccov1 = "3*0.2/((self.N+1.3)**2+self.mueff)"
-
-        self.ccovmu = "min(1-ccov1, 3*0.2*(mueff-2+1/self.mueff) / ((self.N+2)**2+mueff*0.2))"
+        self.ccov1 = oh.get_ccov1(self.__dict__)
+        self.ccovmu = oh.get_ccovmu(self.__dict__)
 
         #CMA learning constant for rank-one update
         self.cp = "1/np.sqrt(self.N)"
@@ -195,7 +194,6 @@ class DefaultOptions:
             else:
                 continue
         return attr_dict
-
 
 
 
