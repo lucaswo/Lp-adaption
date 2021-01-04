@@ -92,13 +92,13 @@ class DefaultOptions:
     #TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
         self.popSize = oh.get_Pop_size(self.__dict__)
         # Learning rate beta line 6 in pseudocode
-        self.beta = "3*0.2/((self.N+1.3)**2+valP*popSize)"
+        self.beta = oh.get_beta(self.__dict__)
 
         # expansion upon success (f_e line 7)
-        self.ss = "1 + beta*(1-self.valP)"
+        self.ss = oh.get_ss(self.__dict__)
 
         # Contraction f_c otherwise (line 8)
-        self.sf = "1 - beta*(self.valP)"
+        self.sf = oh.get_sf(self.__dict__)
 
         #learning rate rank-one update, when CMA
         #Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
@@ -108,7 +108,7 @@ class DefaultOptions:
         self.ccovmu = oh.get_ccovmu(self.__dict__)
 
         #CMA learning constant for rank-one update
-        self.cp = "1/np.sqrt(self.N)"
+        self.cp = oh.get_cp(self.__dict__)
 
         #1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
         # of interest if hitP_adapt == True
@@ -125,15 +125,13 @@ class DefaultOptions:
         self.hitP_adapt['fixedSchedule'] = True
         self.hitP_adapt['maxEvalSchedule'] = [1 / 2, 1 / 8, 1 / 8, 1 / 8, 1 / 8]
         self.hitP_adapt['numLastSchedule'] = [1 / 2, 3 / 4, 3 / 4, 3 / 4, 3 / 4]
-        self.hitP_adapt['testEvery'] = min(18 / self.valP, self.maxMeanSize)
+        self.hitP_adapt['testEvery'] = oh.get_hitP_mean(self.__dict__)
 
-        self.hitP_adapt['stepSize'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
-        self.hitP_adapt['hitP'] = {'meanSize': "min(18 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
-        self.hitP_adapt['VolApprox'] = {'meanSize': "min(30 / self.valP, self.maxMeanSize)", 'deviation': 0.001}
+        self.hitP_adapt['stepSize'] = {'meanSize':oh.get_stepSize_mean(self.__dict__),'deviation': 0.001}
+        self.hitP_adapt['hitP'] = {'meanSize': oh.get_hitP_mean(self.__dict__), 'deviation': 0.001}
+        self.hitP_adapt['VolApprox'] = {'meanSize': oh.get_volApprox_mean(self.__dict__), 'deviation': 0.001}
 
-        self.hitP_adapt['testStart'] = "max([2*self.hitP_adapt['stepSize']['meanSize']," \
-                                       " 2*self.hitP_adapt['hitP']['meanSize']," \
-                                       " 2*self.hitP_adapt['VolApprox']['meanSize']])"
+        self.hitP_adapt['testStart'] =oh.get_testStart(self.__dict__)
 
         self.hitP_adapt['meanOfLast'] = 1 / 4
         self.hitP_adapt['deviation_stop'] = 0.01

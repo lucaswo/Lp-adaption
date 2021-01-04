@@ -4,24 +4,19 @@ import re
 from DefaultOptions import DefaultOptions
 import json
 from scipy.sparse.linalg import arpack
+from Inputs import Oracles
 
 class LpAdaption:
 
-    def __init__(self,oracle:str, xstart:List,inopts=''):
+    def __init__(self, xstart:List,inopts=''):
         '''
         :param oracle: Python File in Inputs directory
          containing oracle class with oracle function
         :param xstart: feasable point to start with
         :param inopts: input options
         '''
-        try:
-            oracle_cleaned = re.sub('.py','',oracle)
-            from Inputs import oracle_cleaned
-            self.oracle = oracle_cleaned.Oracle()
-        except:
-            ValueError('There has to be an Oracle defined in the Inputs folder\ '
-                       'Or at least it has to be a String name of the python file without the .py'
-                       'Example: OracleExample')
+
+        self.oracle = Oracles.Oracle()
         # define dimension N trough starting point
         self.N = len(xstart)
         #load default options
@@ -124,8 +119,35 @@ class LpAdaption:
         if xstart_out != 1:
             ValueError('x_start needs to be a feasable point')
 
+        lastxAcc = self.xstart
+        #Number of function evaluations
+        counteval= 1
+        if p['hitP_adapt']:
+            vcounteval = 1
+            vcountgeneration = 1
+
+            if self.opts.para_hitP_adapt.fixedSchedule:
+                cntsave_Part = 1
+        else:
+            #Number of evaluations after MaxEval - numLast evaluations
+            countevalLast =0
+            #Number of accepted points after MaxEval - numLast points
+            lastNumAcc=0
+
+        countgeneration = 1
+
+        #Number of all accepted points equals one because we need to start with a feasible point!
+        numAcc =1
+        #Number of accepted points for specific hitP
+        vNumAcc =1
+        mu = self.xstart
+
+        #___________Setup Output Parameters_____________
+        
 
 
 
-lp = LpAdaption(oracle='OracleExample',xstart=[1,1])
+
+
+lp = LpAdaption(xstart=[1,1])
 lp.lpAdaption()

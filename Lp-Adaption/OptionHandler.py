@@ -2,6 +2,7 @@ from typing import List,Dict
 import numpy as np
 '''
 Collection of functions for parameters that have to be calculated from other options
+Any parameter, that has to be evaluated from others, should be mentioned here
 '''
 
 def get_numLast(parameters:Dict):
@@ -28,4 +29,29 @@ def get_Pop_size(p:dict):
     return max(4 + np.floor(3 * np.log(p['N'])), np.floor(2 /p['valP']))
 
 def get_beta(p:dict):
-    3 * 0.2 / ((p['N'] + 1.3) ** 2 + p['valP'] * p['popSize'])
+    return 3 * 0.2 / ((p['N'] + 1.3) ** 2 + p['valP'] * p['popSize'])
+
+def get_ss(p:dict):
+    return 1 + p['beta']*(1-p['valP'])
+
+def get_sf(p:dict):
+    return 1 - p['beta']*(p['valP'])
+
+def get_cp(p:dict):
+    return 1/np.sqrt(p['N'])
+
+#____________Set up Functions for Hitting probability adaption_____________
+
+def get_stepSize_mean(p:dict):
+    return min(18 / p['valP'], p['maxMeanSize'])
+
+def get_hitP_mean(p:dict):
+    return min(18 / p['valP'], p['maxMeanSize'])
+
+def get_volApprox_mean(p:dict):
+    return min(30 / p['valP'], p['maxMeanSize'])
+
+def get_testStart(p:dict):
+    return max([2*p['hitP_adapt']['stepSize']['meanSize'],
+                2*p['hitP_adapt']['hitP']['meanSize'],
+                2*p['hitP_adapt']['VolApprox']['meanSize']])
