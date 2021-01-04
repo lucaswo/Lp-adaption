@@ -122,11 +122,11 @@ class LpAdaption:
         lastxAcc = self.xstart
         #Number of function evaluations
         counteval= 1
-        if p['hitP_adapt']:
+        if self.opts.hitP_adapt_cond:
             vcounteval = 1
             vcountgeneration = 1
 
-            if self.opts.para_hitP_adapt.fixedSchedule:
+            if self.opts.para_hitP_adapt['fixedSchedule']:
                 cntsave_Part = 1
         else:
             #Number of evaluations after MaxEval - numLast evaluations
@@ -143,7 +143,12 @@ class LpAdaption:
         mu = self.xstart
 
         #___________Setup Output Parameters_____________
-        
+        if self.isbSavingOn:
+            xRawDim = (int(np.ceil(self.opts.maxEval/self.opts.savingModulo)),self.N)
+            xRaw = np.zeros(shape=xRawDim)
+            xRaw[0,:] = self.xstart
+            #save all accepted x to estimate the upper bound of the volume
+            xAcc = np.zeros((int(self.opts.maxEval),self.N))
 
 
 
