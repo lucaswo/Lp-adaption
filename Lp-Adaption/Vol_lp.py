@@ -1,4 +1,4 @@
-from scipy.stats import gamma
+from scipy.special import gamma
 
 def vol_lp(N:int,r,p:int):
     if p > 100:

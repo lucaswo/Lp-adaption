@@ -1,14 +1,16 @@
 import numpy as np
-from typing import List,Dict
+from typing import List, Dict
 import re
 from DefaultOptions import DefaultOptions
 import json
 from scipy.sparse.linalg import arpack
 from Inputs import Oracles
+from Vol_lp import vol_lp
+
 
 class LpAdaption:
 
-    def __init__(self, xstart:List,inopts=''):
+    def __init__(self, xstart: List, inopts=''):
         '''
         :param oracle: Python File in Inputs directory
          containing oracle class with oracle function
@@ -19,13 +21,13 @@ class LpAdaption:
         self.oracle = Oracles.Oracle()
         # define dimension N trough starting point
         self.N = len(xstart)
-        #load default options
+        # load default options
         self.opts = DefaultOptions(self.N)
         self.xstart = xstart
         if inopts:
             try:
                 if type(inopts) == str:
-                    #swap default paramters in inopts
+                    # swap default paramters in inopts
                     with open(inopts, 'r') as inopts_file:
                         inopts_dict = json.load(inopts_file)
                         self.opts.adaptOption(inopts=inopts_dict)
@@ -33,24 +35,24 @@ class LpAdaption:
                     self.opts.adaptOption(inopts=inopts)
             except:
                 ValueError('Look up your json inopts file for mistakes')
-        #rename option strings, so they can be found from this class
-        for opt,value in self.opts.__dict__.items():
+        # rename option strings, so they can be found from this class
+        for opt, value in self.opts.__dict__.items():
             if type(value) == str:
-                setattr(self.opts,opt,re.sub('self.','self.opts.',value))
+                setattr(self.opts, opt, re.sub('self.', 'self.opts.', value))
         self.isbSavingOn = self.opts.bSaving
         self.isPlottingOn = self.opts.plotting
 
     def lpAdaption(self):
-        #Test if hitP_adapt was set and the condition not, already caught when merging defopts and inopts
-        #Dictionaray of recent parameters
+        # Test if hitP_adapt was set and the condition not, already caught when merging defopts and inopts
+        # Dictionaray of recent parameters
         p = {}
-        #__________SetUp of algorithmic parameters______________
+        # __________SetUp of algorithmic parameters______________
         maxMeanSize = self.opts.maxMeanSize
         if self.opts.hitP_adapt_cond:
-            p['valP'] = self.opts.hitP_adapt['pVec']
+            p['valP'] = self.opts.hitP_adapt['pVec'][0]
         else:
             p['valP'] = self.opts.valP
-        #initialize values for the parameters from the options
+        # initialize values for the parameters from the options
         p['nOut'] = self.opts.nOut
         p['maxEval'] = int(self.opts.maxEval)
         p['mueff'] = 1
@@ -76,50 +78,49 @@ class LpAdaption:
         if self.opts.hitP_adapt_cond:
             p['pVec'] = self.opts.hitP_adapt['pVec']
             p['lpVec'] = len(p['pVec'])
-            #TODO Implement adaptable hitting probability rest
+            # TODO Implement adaptable hitting probability rest
         else:
             numLast = self.opts.numLast
-            #Check, that numLast is smaller than MaxEval
+            # Check, that numLast is smaller than MaxEval
             if numLast > p['maxEval']:
-                numLast = max((p['maxEval'] - 1e3*self.N),p['maxEval'] * 0.7)
-                Warning('Num Last is too big, it was changed to default %d.'%numLast)
+                numLast = max((p['maxEval'] - 1e3 * self.N), p['maxEval'] * 0.7)
+                Warning('Num Last is too big, it was changed to default %d.' % numLast)
 
         averageCoNum = self.opts.averageCovNum
 
         Q = np.array(self.opts.initQ)
         C = np.array(self.opts.initC)
-        #C consistent calculated from Q for compairison with specified C
-        C_calc= p['r']**2*(Q*Q)
-        np.testing.assert_equal(C,C_calc,err_msg='Initialized C Matrix is not consistent with Matrix Q.\n'
-                                                     'Your Q yields to the following C:'%C_calc)
-        #check if C is positiv semidefinit
-        #TODO: Maybe easier way
-        [Bo,tmp] = np.linalg.eig(C)
+        # C consistent calculated from Q for compairison with specified C
+        C_calc = p['r'] ** 2 * (Q * Q)
+        np.testing.assert_equal(C, C_calc, err_msg='Initialized C Matrix is not consistent with Matrix Q.\n'
+                                                   'Your Q yields to the following C:' % C_calc)
+        # check if C is positiv semidefinit
+        # TODO: Maybe easier way
+        [Bo, tmp] = np.linalg.eig(C)
         tol = 1e-8
         vals, vecs = arpack.eigsh(C, k=2, which='BE')
         if not np.all(vals > -tol):
             ValueError('Covariance Matrix need tobe positiv semidefinit!')
-        elif np.size(C,1) != self.N:
+        elif np.size(C, 1) != self.N:
             ValueError(' C has not the same size as your starting point xstart!')
-
 
         diagD = np.sqrt(np.diag(tmp))
         detdiagD = np.prod(diagD)
-        diagD = diagD/(detdiagD**(1/self.N))
-        Q = Bo*(np.tile(diagD,(self.N,1)))
-        r = np.linalg.det(C)**(1/2*self.N)
-        #matlab checks for the same size of C and xstart here again
-        #Anyway, we not cause the check is already above and not in an if/else statement(cause initC and
+        diagD = diagD / (detdiagD ** (1 / self.N))
+        Q = Bo * (np.tile(diagD, (self.N, 1)))
+        r = np.linalg.det(C) ** (1 / 2 * self.N)
+        # matlab checks for the same size of C and xstart here again
+        # Anyway, we not cause the check is already above and not in an if/else statement(cause initC and
         # Q are always provided through default Options)
 
-        [j,eigVals] = np.linalg.eig(Q*np.transpose(Q))
-        condC = np.linalg.cond(Q*np.transpose(Q))
+        [j, eigVals] = np.linalg.eig(Q * np.transpose(Q))
+        condC = np.linalg.cond(Q * np.transpose(Q))
 
-        #___________Setup initial settings_____________
-        #check if xstart is a feasable point
+        # ___________Setup initial settings_____________
+        # check if xstart is a feasable point
         xstart_out = self.oracle.oracle(self.xstart)
         len_x = len(xstart_out)
-        #if dim of vector xstart and nOut Parameter differs, one might want to check the oracle
+        # if dim of vector xstart and nOut Parameter differs, one might want to check the oracle
         if len_x != p['nOut']:
             UserWarning('Dimension of Oracle output differs from nOut option! nOut will be set so the len of xStart!')
             p['nOut'] = len_x
@@ -127,8 +128,8 @@ class LpAdaption:
             ValueError('x_start needs to be a feasable point')
 
         lastxAcc = self.xstart
-        #Number of function evaluations
-        counteval= 1
+        # Number of function evaluations
+        counteval = 1
         if self.opts.hitP_adapt_cond:
             vcounteval = 1
             vcountgeneration = 1
@@ -136,83 +137,171 @@ class LpAdaption:
             if self.opts.hitP_adapt['fixedSchedule']:
                 cntsave_Part = 1
         else:
-            #Number of evaluations after MaxEval - numLast evaluations
-            countevalLast =0
-            #Number of accepted points after MaxEval - numLast points
-            lastNumAcc=0
+            # Number of evaluations after MaxEval - numLast evaluations
+            countevalLast = 0
+            # Number of accepted points after MaxEval - numLast points
+            lastNumAcc = 0
 
         countgeneration = 1
 
-        #Number of all accepted points equals one because we need to start with a feasible point!
-        numAcc =1
-        #Number of accepted points for specific hitP
-        vNumAcc =1
+        # Number of all accepted points equals one because we need to start with a feasible point!
+        numAcc = 1
+        # Number of accepted points for specific hitP
+        vNumAcc = 1
         mu = self.xstart
 
-        #___________Setup Output Parameters_____________
+        # ___________Setup Output Parameters_____________
         if self.isbSavingOn:
-            xRawDim = (np.ceil(p['maxEval']/self.opts.savingModulo).astype('int'),self.N)
+            xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), self.N)
             xRaw = np.empty(shape=xRawDim)
-            xRaw[0,:] = self.xstart
-            #save all accepted x to estimate the upper bound of the volume
-            xAcc = np.empty((int(p['maxEval']),self.N))
+            xRaw[0, :] = self.xstart
+            # save all accepted x to estimate the upper bound of the volume
+            xAcc = np.empty((int(p['maxEval']), self.N))
             # counteval of all accepted x
-            cntAcc = np.empty(shape=(int(p['maxEval']),1))
+            cntAcc = np.empty(shape=(int(p['maxEval']), 1))
 
             cntAcc[0] = 1
 
-            #oracle output is a vector out of 0s and 1s
+            # oracle output is a vector out of 0s and 1s
             if p['nOut'] > 1:
-                fxAcc = np.empty(shape=(int(p['maxEval']),p['nOut']-1))
-                fxAcc[0,:] = xstart_out[1:]
-            xAcc[0,:] = np.transpose(xstart_out)
+                fxAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
+                fxAcc[0, :] = xstart_out[1:]
+            xAcc[0, :] = np.transpose(xstart_out)
 
             if self.opts.unfeasibleSave:
-                xNotAcc = np.empty(shape=(int(p['maxEval']),p['nOut']-1))
-                cntNotAcc = np.empty(shape=(p['maxEval'],1))
-                if p['nOut']>1:
+                xNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
+                cntNotAcc = np.empty(shape=(p['maxEval'], 1))
+                if p['nOut'] > 1:
                     fxNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
 
             # Vector, if sample was accepted or not
-            c_TVec = np.empty(shape=(np.ceil(p['maxEval']/self.opts.savingModulo).astype('int'),1))
+            c_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), 1))
             c_TVec[0] = xstart_out[0]
 
             # if output length of oracle is bigger than one, the following oracle values have to be saved
-            if p['nOut']>1:
+            if p['nOut'] > 1:
                 fc_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), p['nOut'] - 1))
-                fc_TVec[0,:] = xstart_out[1:]
+                fc_TVec[0, :] = xstart_out[1:]
 
-           # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
-            #TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
-            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'),1))
+            # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
+            # TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
+            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), 1))
             countVec[0] = 1
 
             # TODO: in Matlab just a 1x1 cell for double value, init. here usefull?
             stopFlag = None
 
-            #settings for CMA/GaA
-            verboseModuloGen = np.ceil(self.opts.verboseModulo/p['popSize']).astype('int')
-            savingModuloGen = np.ceil(self.opts.savingModulo/p['popSize']).astype('int')
-            tmp_num = np.ceil(p['maxEval']/savingModuloGen).astype('int')
+            # settings for CMA/GaA
+            verboseModuloGen = np.ceil(self.opts.verboseModulo / p['popSize']).astype('int')
+            savingModuloGen = np.ceil(self.opts.savingModulo / p['popSize']).astype('int')
+            tmp_num = np.ceil(p['maxEval'] / savingModuloGen).astype('int')
             if self.opts.hitP_adapt_cond:
-                #how often hitting probability is changed
-                cntAdapt=1
+                # how often hitting probability is changed
+                cntAdapt = 1
                 # save different values for parameter when hitp changes
-                n_MuVec = np.empty(shape = (p['lpVec'],1))
-                n_MuVec[0] =p['N_mu']
-                betaVec = np.empty(shape = (p['lpVec'],1))
+                n_MuVec = np.empty(shape=(p['lpVec'], 1))
+                n_MuVec[0] = p['N_mu']
+                betaVec = np.empty(shape=(p['lpVec'], 1))
                 betaVec[0] = p['beta']
-                ssVec = np.empty(shape = (p['lpVec'],1))
+                ssVec = np.empty(shape=(p['lpVec'], 1))
                 ssVec[0] = p['ss']
-                sfVec = np.empty(shape = (p['lpVec'],1))
+                sfVec = np.empty(shape=(p['lpVec'], 1))
                 sfVec[0] = p['sf']
-                iterVec = np.empty(shape = (p['lpVec'],1))
-                windowSize = np.ceil(self.opts.windowSizeEval/p['popSize'])
+                iterVec = np.empty(shape=(p['lpVec'], 1))
+                windowSize = np.ceil(self.opts.windowSizeEval / p['popSize'])
+                ccov1Vec = np.empty(shape=(p['lpVec'], 1))
+                ccov1Vec[0] = p['ccov1']
+                ccovmu_Vec = np.empty(shape=(p['lpVec'], 1))
+                ccovmu_Vec[0] = p['ccovmu']
+                cntGenVec = np.empty(shape=(p['lpVec'], 1))
+                popSizeVec = np.empty(shape=(p['lpVec'], 1))
+                popSizeVec[0] = p['popSize']
 
-            
+            alpha_p = 1
+            # initial evolution path for C
+            pc = np.zeros(shape=(self.N, 1))
+            # Save generation of of accepted samples
+            cntAccGen = np.empty(shape=(p['maxEval'], 1))
+            # Vector of evaluation indices when r,mu is saved
+            cntVec = np.empty(shape=(tmp_num, 1))
+            cntVec[0] = 1
+
+            # TODO Find out if next line of code (comment) is needed, matlab code not sure
+            # saveIndGeneration = 2
+
+            # Vector of step length
+            rVec = np.zeros(shape=(tmp_num, 1))
+            rVec[0] = p['r']
+
+            # Vector of mu
+            muVec = np.empty(shape=(tmp_num, self.N))
+            muVec[0, :] = mu
+
+            # Vector of Volumina of the Lp Balls
+            volVec = np.zeros(shape=(tmp_num, 1))
+            volVec[0] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, p['r'], p['pn'])
+
+            # Vector of empirical acceptance probability
+            p_empVecAll = np.zeros(shape=(tmp_num, 1))
+            p_empVecAll[0] = p['valP']
+            p_empVecWindow = np.zeros(shape=(tmp_num, 1))
+            p_empVecWindow[0] = p['valP']
+            numMuVec = np.zeros(shape=(p['windowSize'], 1))
+
+            # Cell array of Q matrices
+            # TODO: test in the end if len of qcell list is tmp_num
+            if self.opts.bSaveCov:
+                qCell = []
+                qCell.append(Q)
+
+            if self.opts.hitP_adapt_cond:
+                # for each hitP save mu. r, hitP, Q
+                muLastVec = np.empty(shape=(p['lpVec'], 1))
+                rLastVec = np.empty(shape=(p['lpVec'], 1))
+                qLastCell = []  # shape = cell(lPVec,1)
+
+                hitPLastVec = np.empty(shape=(p['lpVec'], 1))
+                sizeLastVec = np.empty(shape=(p['lpVec'], 1))
+                approxVolLastVec = np.empty(shape=(p['lpVec'], 1))
+
+                if self.opts.hitP_adapt['fixedSchedule']:
+                    maxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]) * p['maxEval']
+                    numLastPart = np.ceil(self.opts.hitP_adapt['numLastSchedule'][cntAdapt] * p['maxEval'] / p['popSize'])
+
+                    muLast = np.empty(shape=(numLastPart.astype('int'), self.N))
+                    rLast = np.zeros(shape=(np.ceil(numLastPart).astype('int'), 1))
+                    p_empLast= np.empty(shape=(np.ceil(numLastPart).astype('int'), 1))
+
+            else:
+                if numLast:
+                    #Trace of numLast mu, r and hittingP values
+                    muLast = np.empty(shape=(np.ceil(numLast/p['popSize']),self.N))
+                    rLast = np.zeros(shape=(np.ceil(numLast/p['popSize']),1))
+                    p_empLast = shape=(np.ceil(numLast/p['popSize']),1)
+
+        if self.opts.hitP_adapt_cond:
+            #save alle step sizes
+            rVec_all = np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            rVec_all[0] = p['r']
+            #save alle hitP
+            hitP_all = np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            hitP_all[0] = p['valP']
+            #save corresponding function evaluations
+            cnt_all =np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            cnt_all[0] = 1
+        #gets 1 if change of hitP occurs TODO: relevant, notwendig?
+        van = 0
+        saveInd =2
+        saveIndAcc = 2
+        saveIndNotAcc =1 # everything starts with feasable point
+        stopFlag=''
+        if not (self.opts.hitP_adapt_cond and not self.opts.hitP_adapt['fixedSchedule']):
+            saveIndLast = 0 # number of iterations after max eval - numLast evaluations
+        if self.opts.hitP_adapt_cond and self.opts.hitP_adapt['fixedSchedule']:
+            MaxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]*p['maxEval'])
+            numLast_Part = np.floor(self.opts.hitP_adapt['numLastSchedule'][cntAdapt]*MaxEval_Part)
 
 
 
-
-lp = LpAdaption(xstart=[1,1])
+lp = LpAdaption(xstart=[1, 1])
 lp.lpAdaption()
