@@ -28,7 +28,7 @@ class DefaultOptions:
         # ???
         self.oracleInopts = []
 
-        # number of outputs from the oracle (first has to be 0/1), later mor values possible
+        # number of outputs from the oracle (first has to be 0/1), later more values possible
         self.nOut = 1
 
         # Plot results: for irst tests off, TODO: Set default 'on' if plotting is available
@@ -36,10 +36,10 @@ class DefaultOptions:
 
         # After wich iteration one want to have a message from Commandline.
         # MaxEval % verbosemodulo == 0
-        self.verboseModulo = 1e3
+        self.verboseModulo = int(1e3)
 
         # Save after i-th iteration, maxeval % savingmodulo ==0
-        self.savingModulo = 1e2
+        self.savingModulo = int(1e2)
 
         # Save data to file on/off
         self.bSaving = True
@@ -112,7 +112,7 @@ class DefaultOptions:
 
         #1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
         # of interest if hitP_adapt == True
-        self.hitP_adapt_cond = False
+        self.hitP_adapt_cond = True
 
         if self.hitP_adapt_cond:
             self.__invoke_hitP_adaption()
@@ -121,7 +121,7 @@ class DefaultOptions:
 
     def __invoke_hitP_adaption(self):
         self.hitP_adapt = {}
-        self.hitP_adapt['Pvec'] = [0.35, 0.15, 0.06, 0.03, 0.01]
+        self.hitP_adapt['pVec'] = [0.35, 0.15, 0.06, 0.03, 0.01]
         self.hitP_adapt['fixedSchedule'] = True
         self.hitP_adapt['maxEvalSchedule'] = [1 / 2, 1 / 8, 1 / 8, 1 / 8, 1 / 8]
         self.hitP_adapt['numLastSchedule'] = [1 / 2, 3 / 4, 3 / 4, 3 / 4, 3 / 4]

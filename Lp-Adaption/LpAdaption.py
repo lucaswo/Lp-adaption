@@ -47,11 +47,12 @@ class LpAdaption:
         #__________SetUp of algorithmic parameters______________
         maxMeanSize = self.opts.maxMeanSize
         if self.opts.hitP_adapt_cond:
-            p['valP'] = self.opts.hitP_adapt['PVec']
+            p['valP'] = self.opts.hitP_adapt['pVec']
         else:
             p['valP'] = self.opts.valP
         #initialize values for the parameters from the options
         p['nOut'] = self.opts.nOut
+        p['maxEval'] = int(self.opts.maxEval)
         p['mueff'] = 1
         p['N_mu'] = self.opts.N_mu
         p['N_C'] = self.opts.N_C
@@ -60,7 +61,7 @@ class LpAdaption:
         p['popSize'] = self.opts.popSize
         p['cp'] = self.opts.cp
         p['l_expected'] = np.sqrt(self.N)
-        p['windowSize'] = np.ceil(self.opts.windowSizeEval)
+        p['windowSize'] = np.ceil(self.opts.windowSizeEval).astype('int')
         p['beta'] = self.opts.beta
         p['ss'] = self.opts.ss
         p['sf'] = self.opts.sf
@@ -73,13 +74,14 @@ class LpAdaption:
         p['p_empWindow'] = 0
 
         if self.opts.hitP_adapt_cond:
-            test=0
-            #TODO. Implement adaptable hitting probabilitie
+            p['pVec'] = self.opts.hitP_adapt['pVec']
+            p['lpVec'] = len(p['pVec'])
+            #TODO Implement adaptable hitting probability rest
         else:
             numLast = self.opts.numLast
             #Check, that numLast is smaller than MaxEval
-            if numLast > self.opts.maxEval:
-                numLast = max((self.opts.maxEval - 1e3*self.N),self.opts.maxEval * 0.7)
+            if numLast > p['maxEval']:
+                numLast = max((p['maxEval'] - 1e3*self.N),p['maxEval'] * 0.7)
                 Warning('Num Last is too big, it was changed to default %d.'%numLast)
 
         averageCoNum = self.opts.averageCovNum
@@ -116,7 +118,12 @@ class LpAdaption:
         #___________Setup initial settings_____________
         #check if xstart is a feasable point
         xstart_out = self.oracle.oracle(self.xstart)
-        if xstart_out != 1:
+        len_x = len(xstart_out)
+        #if dim of vector xstart and nOut Parameter differs, one might want to check the oracle
+        if len_x != p['nOut']:
+            UserWarning('Dimension of Oracle output differs from nOut option! nOut will be set so the len of xStart!')
+            p['nOut'] = len_x
+        if xstart_out[0] != 1:
             ValueError('x_start needs to be a feasable point')
 
         lastxAcc = self.xstart
@@ -126,7 +133,7 @@ class LpAdaption:
             vcounteval = 1
             vcountgeneration = 1
 
-            if self.opts.para_hitP_adapt['fixedSchedule']:
+            if self.opts.hitP_adapt['fixedSchedule']:
                 cntsave_Part = 1
         else:
             #Number of evaluations after MaxEval - numLast evaluations
@@ -144,12 +151,65 @@ class LpAdaption:
 
         #___________Setup Output Parameters_____________
         if self.isbSavingOn:
-            xRawDim = (int(np.ceil(self.opts.maxEval/self.opts.savingModulo)),self.N)
-            xRaw = np.zeros(shape=xRawDim)
+            xRawDim = (np.ceil(p['maxEval']/self.opts.savingModulo).astype('int'),self.N)
+            xRaw = np.empty(shape=xRawDim)
             xRaw[0,:] = self.xstart
             #save all accepted x to estimate the upper bound of the volume
-            xAcc = np.zeros((int(self.opts.maxEval),self.N))
+            xAcc = np.empty((int(p['maxEval']),self.N))
+            # counteval of all accepted x
+            cntAcc = np.empty(shape=(int(p['maxEval']),1))
 
+            cntAcc[0] = 1
+
+            #oracle output is a vector out of 0s and 1s
+            if p['nOut'] > 1:
+                fxAcc = np.empty(shape=(int(p['maxEval']),p['nOut']-1))
+                fxAcc[0,:] = xstart_out[1:]
+            xAcc[0,:] = np.transpose(xstart_out)
+
+            if self.opts.unfeasibleSave:
+                xNotAcc = np.empty(shape=(int(p['maxEval']),p['nOut']-1))
+                cntNotAcc = np.empty(shape=(p['maxEval'],1))
+                if p['nOut']>1:
+                    fxNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
+
+            # Vector, if sample was accepted or not
+            c_TVec = np.empty(shape=(np.ceil(p['maxEval']/self.opts.savingModulo).astype('int'),1))
+            c_TVec[0] = xstart_out[0]
+
+            # if output length of oracle is bigger than one, the following oracle values have to be saved
+            if p['nOut']>1:
+                fc_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), p['nOut'] - 1))
+                fc_TVec[0,:] = xstart_out[1:]
+
+           # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
+            #TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
+            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'),1))
+            countVec[0] = 1
+
+            # TODO: in Matlab just a 1x1 cell for double value, init. here usefull?
+            stopFlag = None
+
+            #settings for CMA/GaA
+            verboseModuloGen = np.ceil(self.opts.verboseModulo/p['popSize']).astype('int')
+            savingModuloGen = np.ceil(self.opts.savingModulo/p['popSize']).astype('int')
+            tmp_num = np.ceil(p['maxEval']/savingModuloGen).astype('int')
+            if self.opts.hitP_adapt_cond:
+                #how often hitting probability is changed
+                cntAdapt=1
+                # save different values for parameter when hitp changes
+                n_MuVec = np.empty(shape = (p['lpVec'],1))
+                n_MuVec[0] =p['N_mu']
+                betaVec = np.empty(shape = (p['lpVec'],1))
+                betaVec[0] = p['beta']
+                ssVec = np.empty(shape = (p['lpVec'],1))
+                ssVec[0] = p['ss']
+                sfVec = np.empty(shape = (p['lpVec'],1))
+                sfVec[0] = p['sf']
+                iterVec = np.empty(shape = (p['lpVec'],1))
+                windowSize = np.ceil(self.opts.windowSizeEval/p['popSize'])
+
+            
 
 
 
