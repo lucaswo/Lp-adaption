@@ -112,7 +112,7 @@ class DefaultOptions:
 
         #1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
         # of interest if hitP_adapt == True
-        self.hitP_adapt_cond = True
+        self.hitP_adapt_cond = False
 
         if self.hitP_adapt_cond:
             self.__invoke_hitP_adaption()

@@ -6,6 +6,8 @@ import json
 from scipy.sparse.linalg import arpack
 from Inputs import Oracles
 from Vol_lp import vol_lp
+from LpBallSampling import LpBall
+from numpy import matlib
 
 
 class LpAdaption:
@@ -129,9 +131,9 @@ class LpAdaption:
 
         lastxAcc = self.xstart
         # Number of function evaluations
-        counteval = 1
+        counteval = [1]
         if self.opts.hitP_adapt_cond:
-            vcounteval = 1
+            vcounteval = [1]
             vcountgeneration = 1
 
             if self.opts.hitP_adapt['fixedSchedule']:
@@ -275,9 +277,9 @@ class LpAdaption:
             else:
                 if numLast:
                     #Trace of numLast mu, r and hittingP values
-                    muLast = np.empty(shape=(np.ceil(numLast/p['popSize']),self.N))
-                    rLast = np.zeros(shape=(np.ceil(numLast/p['popSize']),1))
-                    p_empLast = shape=(np.ceil(numLast/p['popSize']),1)
+                    muLast = np.empty(shape=(np.ceil(numLast/p['popSize']).astype('int'),self.N))
+                    rLast = np.zeros(shape=(np.ceil(numLast/p['popSize']).astype('int'),1))
+                    p_empLast = shape=(np.ceil(numLast/p['popSize']).astype('int'),1)
 
         if self.opts.hitP_adapt_cond:
             #save alle step sizes
@@ -301,6 +303,35 @@ class LpAdaption:
             MaxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]*p['maxEval'])
             numLast_Part = np.floor(self.opts.hitP_adapt['numLastSchedule'][cntAdapt]*MaxEval_Part)
 
+        #_______________________Generation Loop_______________________
+
+        PopSizeOld = []
+        lastEval = 1
+
+        [Bo,tmp]=np.linalg.eig(C)
+        diagD = np.sqrt(np.diag(tmp))
+
+        invB = np.diag(1/diagD)*Bo
+        while counteval[-1] < (p['maxEval']-p['popSize']-lastEval):
+            counteval = np.array(range(1,p['popSize'].astype('int'))) + counteval[-1]
+
+            if self.opts.hitP_adapt_cond:
+                vcounteval = np.array(range(1,p['popSize'].astype('int'))) + vcounteval[-1]
+                vcountgeneration +=1
+
+            countgeneration +=1
+
+            #generate PopSize candidate solutions from LpBall sampling
+            if p['pn']>100: #sample uniform from hypercube with radius 1
+                arz = 2*np.random.rand((self.N,p['popSize'])) - 1
+            else:
+                arz = LpBall(self.N,p['popSize'])
+
+            arx = np.tile(mu,(1,p['popSize'].astype('int')))
+            
+
+
+            print(arx)
 
 
 lp = LpAdaption(xstart=[1, 1])
