@@ -7,6 +7,7 @@ from scipy.sparse.linalg import arpack
 from Inputs import Oracles
 from Vol_lp import vol_lp
 from LpBallSampling import LpBall
+from PlotData import PlotData
 from numpy import matlib
 
 
@@ -14,6 +15,7 @@ class LpAdaption:
 
     def __init__(self, xstart: List, inopts=''):
         '''
+
         :param oracle: Python File in Inputs directory
          containing oracle class with oracle function
         :param xstart: feasable point to start with
@@ -229,7 +231,7 @@ class LpAdaption:
             cntVec[0] = 1
 
             # TODO Find out if next line of code (comment) is needed, matlab code not sure
-            # saveIndGeneration = 2
+            saveIndGeneration = 2
 
             # Vector of step length
             rVec = np.zeros(shape=(tmp_num, 1))
@@ -268,70 +270,80 @@ class LpAdaption:
 
                 if self.opts.hitP_adapt['fixedSchedule']:
                     maxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]) * p['maxEval']
-                    numLastPart = np.ceil(self.opts.hitP_adapt['numLastSchedule'][cntAdapt] * p['maxEval'] / p['popSize'])
+                    numLastPart = np.ceil(
+                        self.opts.hitP_adapt['numLastSchedule'][cntAdapt] * p['maxEval'] / p['popSize'])
 
                     muLast = np.empty(shape=(numLastPart.astype('int'), self.N))
                     rLast = np.zeros(shape=(np.ceil(numLastPart).astype('int'), 1))
-                    p_empLast= np.empty(shape=(np.ceil(numLastPart).astype('int'), 1))
+                    p_empLast = np.empty(shape=(np.ceil(numLastPart).astype('int'), 1))
 
             else:
                 if numLast:
-                    #Trace of numLast mu, r and hittingP values
-                    muLast = np.empty(shape=(np.ceil(numLast/p['popSize']).astype('int'),self.N))
-                    rLast = np.zeros(shape=(np.ceil(numLast/p['popSize']).astype('int'),1))
-                    p_empLast = shape=(np.ceil(numLast/p['popSize']).astype('int'),1)
+                    # Trace of numLast mu, r and hittingP values
+                    muLast = np.empty(shape=(np.ceil(numLast / p['popSize']).astype('int'), self.N))
+                    rLast = np.zeros(shape=(np.ceil(numLast / p['popSize']).astype('int'), 1))
+                    p_empLast = shape = (np.ceil(numLast / p['popSize']).astype('int'), 1)
 
         if self.opts.hitP_adapt_cond:
-            #save alle step sizes
-            rVec_all = np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            # save alle step sizes
+            rVec_all = np.empty(shape=(np.ceil(p['maxEval'] / p['popSize']).astype('int'), 1))
             rVec_all[0] = p['r']
-            #save alle hitP
-            hitP_all = np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            # save alle hitP
+            hitP_all = np.empty(shape=(np.ceil(p['maxEval'] / p['popSize']).astype('int'), 1))
             hitP_all[0] = p['valP']
-            #save corresponding function evaluations
-            cnt_all =np.empty(shape=(np.ceil(p['maxEval']/p['popSize']).astype('int'),1))
+            # save corresponding function evaluations
+            cnt_all = np.empty(shape=(np.ceil(p['maxEval'] / p['popSize']).astype('int'), 1))
             cnt_all[0] = 1
-        #gets 1 if change of hitP occurs TODO: relevant, notwendig?
+        # gets 1 if change of hitP occurs TODO: relevant, notwendig?
         van = 0
-        saveInd =2
+        saveInd = 2
         saveIndAcc = 2
-        saveIndNotAcc =1 # everything starts with feasable point
-        stopFlag=''
+        saveIndNotAcc = 1  # everything starts with feasable point
+        stopFlag = ''
         if not (self.opts.hitP_adapt_cond and not self.opts.hitP_adapt['fixedSchedule']):
-            saveIndLast = 0 # number of iterations after max eval - numLast evaluations
+            saveIndLast = 0  # number of iterations after max eval - numLast evaluations
         if self.opts.hitP_adapt_cond and self.opts.hitP_adapt['fixedSchedule']:
-            MaxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]*p['maxEval'])
-            numLast_Part = np.floor(self.opts.hitP_adapt['numLastSchedule'][cntAdapt]*MaxEval_Part)
+            MaxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt] * p['maxEval'])
+            numLast_Part = np.floor(self.opts.hitP_adapt['numLastSchedule'][cntAdapt] * MaxEval_Part)
 
-        #_______________________Generation Loop_______________________
+        # _______________________Generation Loop_______________________
 
         PopSizeOld = []
         lastEval = 1
 
-        [Bo,tmp]=np.linalg.eig(C)
+        [Bo, tmp] = np.linalg.eig(C)
         diagD = np.sqrt(np.diag(tmp))
 
-        invB = np.diag(1/diagD)*Bo
-        while counteval[-1] < (p['maxEval']-p['popSize']-lastEval):
-            counteval = np.array(range(1,p['popSize'].astype('int'))) + counteval[-1]
+        invB = np.diag(1 / diagD) * Bo
+        while counteval[-1] < (p['maxEval'] - p['popSize'] - lastEval):
+            counteval = np.array(range(1, p['popSize'].astype('int'))) + counteval[-1]
 
             if self.opts.hitP_adapt_cond:
-                vcounteval = np.array(range(1,p['popSize'].astype('int'))) + vcounteval[-1]
-                vcountgeneration +=1
+                vcounteval = np.array(range(1, p['popSize'].astype('int'))) + vcounteval[-1]
+                vcountgeneration += 1
 
-            countgeneration +=1
+            countgeneration += 1
 
-            #generate PopSize candidate solutions from LpBall sampling
-            if p['pn']>100: #sample uniform from hypercube with radius 1
-                arz = 2*np.random.rand((self.N,p['popSize'])) - 1
+            # generate PopSize candidate solutions from LpBall sampling
+            if p['pn'] > 100:  # sample uniform from hypercube with radius 1
+                arz = 2 * np.random.rand((self.N, p['popSize'])) - 1
             else:
-                arz = LpBall(self.N,p['popSize'])
+                arz = np.transpose(LpBall(dim=self.N, pnorm=p['pn']).samplefromball(number=p['popSize']))
 
-            arx = np.tile(mu,(1,p['popSize'].astype('int')))
-            
+            # sampled vectors as input for oracle
+            v = np.tile(mu, (p['popSize'].astype('int'), 1))
+            arx = np.add(v, r * np.dot(Q, arz))
 
+            if self.isPlottingOn and self.isbSavingOn:
+                plot = PlotData()
+                plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N, eigVals, r,
+                          p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
 
-            print(arx)
+            # ________Oracle_______________
+            # vector of oracle decisions for Popsize samples
+            c_T = np.empty(shape=(p['popSize'].astype('int'), 1))
+            # Matrix of oracle outputs for every sample
+            outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
 
 
 lp = LpAdaption(xstart=[1, 1])

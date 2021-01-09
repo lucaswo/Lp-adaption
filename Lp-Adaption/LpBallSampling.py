@@ -26,7 +26,7 @@ class LpBall:
         psi = [x ** (1 / self.pnorm) for x in psi]
 
         # generate number x dim random signs for the samples psi to multiply with
-        signs = np.random.randint(2, size=(number, self.dim))
+        signs = np.random.randint(2, size=(number.astype('int'), self.dim))
         signs[signs == 0] = -1
         X = psi * signs
         # calc z = w^/dim, where w is random variable in [0,1]
