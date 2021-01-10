@@ -9,6 +9,7 @@ from Vol_lp import vol_lp
 from LpBallSampling import LpBall
 from PlotData import PlotData
 from numpy import matlib
+import OptionHandler as oh
 
 
 class LpAdaption:
@@ -332,7 +333,6 @@ class LpAdaption:
 
             # sampled vectors as input for oracle
             v = np.transpose(np.tile(mu, (p['popSize'].astype('int'), 1)))
-            print(Q,arz)
             arx = np.add(v,r*(Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
@@ -342,11 +342,51 @@ class LpAdaption:
 
             # ________Oracle_______________
             # vector of oracle decisions for Popsize samples
-            c_T = np.empty(shape=(p['popSize'].astype('int'), 1))
+            c_T = np.zeros(shape=(p['popSize'].astype('int'), 1))
             # Matrix of oracle outputs for every sample
             outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
-            
 
+            for s in range(0,p['popSize']):
+                outArgs = self.oracle.oracle(arx[:,s])
+                c_T[s] = outArgs[0]
+                if p['nOut']>1:
+                    if np.any(outArgs):
+                        outArgsMat[s,:] = None
+                    else:
+                        outArgsMat[s,:] = outArgs[1:]
+
+            # numfeas candidate solutions are in feasable region
+            numfeas = np.sum(c_T==1)
+            numMuVec[(countgeneration % p['windowSize'])] = numfeas
+            numAccWindow = sum(numMuVec)
+
+            if numfeas >0:
+                #get alle feasable point from candidate solutions
+                pop = arx[:,c_T==1]
+                weights = np.ones(shape=(numfeas,1))/numfeas # uniform weights
+
+                #count accepted solutions
+                numAcc = numAcc +numfeas
+                if self.opts.hitP_adapt_cond:
+                    vNumAcc = vNumAcc + numfeas
+
+            if self.opts.hitP_adapt_cond:
+                rVec_all[countgeneration] =r
+                #TODO: Immplement hittingP Adaption
+
+            if van == 0:
+                p['mueff'] = numfeas
+                p['ccov1'] = oh.get_ccov1(p)
+                p['ccovmu'] = oh.get_ccovmu(p)
+                p['N_mu'] = oh.get_N_mu(p)
+
+            #____________ %% Code for adaptation of C based on original Adaptive Encoding
+        #   procedure by N. Hansen, see
+        #    REFERENCE: Hansen, N. (2008). Adaptive Encoding: How to Render
+        #    Search Coordinate System Invariant. In Rudolph et al. (eds.)
+        #    Parallel Problem Solving from Nature, PPSN X,
+        #    Proceedings, Springer. http://hal.inria.fr/inria-00287351/en/
+        #_____________________________________________________________________________
 
 lp = LpAdaption(xstart=[1, 1])
 lp.lpAdaption()

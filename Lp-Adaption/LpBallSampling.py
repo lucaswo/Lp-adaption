@@ -37,7 +37,6 @@ class LpBall:
         l = np.array(np.sum(np.abs(X) ** self.pnorm,axis=1)**(1. / self.pnorm))
         m = np.transpose(np.tile(l,(self.dim,1)))
         y = np.tile(z,(1,self.dim))*(X/m)
-        print('Samples from Lp-Ball : \n', y)
         return y
 
 
