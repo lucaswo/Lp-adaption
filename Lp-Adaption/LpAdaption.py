@@ -64,7 +64,7 @@ class LpAdaption:
         p['N_C'] = self.opts.N_C
         p['ccov1'] = self.opts.ccov1
         p['ccovmu'] = self.opts.ccovmu
-        p['popSize'] = self.opts.popSize
+        p['popSize'] = self.opts.popSize.astype('int')
         p['cp'] = self.opts.cp
         p['l_expected'] = np.sqrt(self.N)
         p['windowSize'] = np.ceil(self.opts.windowSizeEval).astype('int')
@@ -331,8 +331,9 @@ class LpAdaption:
                 arz = np.transpose(LpBall(dim=self.N, pnorm=p['pn']).samplefromball(number=p['popSize']))
 
             # sampled vectors as input for oracle
-            v = np.tile(mu, (p['popSize'].astype('int'), 1))
-            arx = np.add(v, r * np.dot(Q, arz))
+            v = np.transpose(np.tile(mu, (p['popSize'].astype('int'), 1)))
+            print(Q,arz)
+            arx = np.add(v,r*(Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
                 plot = PlotData()
@@ -344,6 +345,7 @@ class LpAdaption:
             c_T = np.empty(shape=(p['popSize'].astype('int'), 1))
             # Matrix of oracle outputs for every sample
             outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
+            
 
 
 lp = LpAdaption(xstart=[1, 1])
