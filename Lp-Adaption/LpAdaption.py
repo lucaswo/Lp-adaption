@@ -334,7 +334,7 @@ class LpAdaption:
 
             # sampled vectors as input for oracle
             v = np.transpose(np.tile(mu, (p['popSize'].astype('int'), 1)))
-            arx = np.add(v,r*(Q @ arz))
+            arx = np.add(v, r * (Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
                 plot = PlotData()
@@ -347,34 +347,38 @@ class LpAdaption:
             # Matrix of oracle outputs for every sample
             outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
 
-            for s in range(0,p['popSize']):
-                outArgs = self.oracle.oracle(arx[:,s])
+            for s in range(0, p['popSize']):
+                outArgs = self.oracle.oracle(arx[:, s])
                 c_T[s] = outArgs[0]
-                if p['nOut']>1:
+                if p['nOut'] > 1:
                     if np.any(outArgs):
-                        outArgsMat[s,:] = None
+                        outArgsMat[s, :] = None
                     else:
-                        outArgsMat[s,:] = outArgs[1:]
+                        outArgsMat[s, :] = outArgs[1:]
 
             # numfeas candidate solutions are in feasable region
-            numfeas = np.sum(c_T==1)
+            numfeas = np.sum(c_T == 1)
             numMuVec[(countgeneration % p['windowSize'])] = numfeas
             numAccWindow = sum(numMuVec)
 
-            if numfeas >0:
-                #get alle feasable point from candidate solutions
-                indexes = np.where(c_T==1)[0]
-                pop = arx[:,indexes]
-                weights = np.ones(shape=(numfeas,1))/numfeas # uniform weights
+            if numfeas > 0:
+                # get alle feasable point from candidate solutions
+                indexes = np.where(c_T == 1)[0]
+                pop = arx[:, indexes]
+                weights = np.ones(shape=(numfeas, 1)) / numfeas  # uniform weights
 
-                #count accepted solutions
-                numAcc = numAcc +numfeas
+                # count accepted solutions
+                numAcc = numAcc + numfeas
                 if self.opts.hitP_adapt_cond:
                     vNumAcc = vNumAcc + numfeas
 
             if self.opts.hitP_adapt_cond:
-                rVec_all[countgeneration] =r
-                #TODO: Immplement hittingP Adaption
+                rVec_all[countgeneration] = r
+                # TODO: Immplement hittingP Adaption
+            else:
+                cntEvalWindow = min(counteval[-1], p['windowSize'] * p['popSize'])
+                p_empAll = numAcc / counteval[-1]
+                p_empVecWindow = numAccWindow / cntEvalWindow
 
             if van == 0:
                 p['mueff'] = numfeas
@@ -382,41 +386,48 @@ class LpAdaption:
                 p['ccovmu'] = oh.get_ccovmu(p)
                 p['N_mu'] = oh.get_N_mu(p)
 
-            #____________ %% Code for adaptation of C based on original Adaptive Encoding
-        #   procedure by N. Hansen, see
-        #    REFERENCE: Hansen, N. (2008). Adaptive Encoding: How to Render
-        #    Search Coordinate System Invariant. In Rudolph et al. (eds.)
-        #    Parallel Problem Solving from Nature, PPSN X,
-        #    Proceedings, Springer. http://hal.inria.fr/inria-00287351/en/
-        #_____________________________________________________________________________
-            #Adapt step size, (ball radius r)
+            # ____________ %% Code for adaptation of C based on original Adaptive Encoding
+            #   procedure by N. Hansen, see
+            #    REFERENCE: Hansen, N. (2008). Adaptive Encoding: How to Render
+            #    Search Coordinate System Invariant. In Rudolph et al. (eds.)
+            #    Parallel Problem Solving from Nature, PPSN X,
+            #    Proceedings, Springer. http://hal.inria.fr/inria-00287351/en/
+            # _____________________________________________________________________________
+            # Adapt step size, (ball radius r)
             # Depends on the number of feasable Points,
             # Pseudo code line 15
-            r = r*p['ss']**numfeas * p['sf']**(p['popSize']-numfeas)
-            r = max(min(r,p['rMax']),p['rMin'])
+            r = r * p['ss'] ** numfeas * p['sf'] ** (p['popSize'] - numfeas)
+            r = max(min(r, p['rMax']), p['rMin'])
 
             # Adapt mu
             mu_old = mu
             # if feasable points found, adapt mean and finally proposal distribution...
             if numfeas != 0 and self.opts.madapt:
-                #adapt mean, pseudo code line 17
-                mu = (1-1/p['N_mu'])*mu +np.reshape((1/p['N_mu'])*pop @ weights,(2,))
+                # adapt mean, pseudo code line 17
+                mu = (1 - 1 / p['N_mu']) * mu + np.reshape((1 / p['N_mu']) * pop @ weights, (2,))
 
-                #Update evolution paths
-                if sum((invB*(mu-mu_old))**2).any() ==0:
-                    z=0
+                # Update evolution paths
+                if sum((invB * (mu - mu_old)) ** 2).any() == 0:
+                    z = 0
                 else:
-                    alpha0 = p['l_expected']/np.sqrt(sum((invB*(mu-mu_old))**2))
-                    #part of pseudo code line 19 alpha0(mu-mu_old), calculation of alph_j see Nikolaus,Hansen paper 2008
-                    z = alpha0*(mu-mu_old)
+                    alpha0 = p['l_expected'] / np.sqrt(sum((invB @ (mu - mu_old)) ** 2))
+                    # part of pseudo code line 19 alpha0(mu-mu_old), calculation of alph_j see Nikolaus,Hansen paper 2008
+                    z = alpha0 * (mu - mu_old)
             else:
                 z = 0
 
-            pc = (1-p['cp'])*pc +np.sqrt(p['cp']*(2-p['cp']))*z
+            pc = (1 - p['cp']) * pc + np.sqrt(p['cp'] * (2 - p['cp'])) * z
             s = pc * np.transpose(pc)
 
+            # Adapt Covariance C
+            if numfeas > 0 and self.opts.cadapt:  # No adaption of C if now feasable solution in Population
+                # TODO Check calculation at np tile
+                arnorm = np.sqrt(sum((invB @ (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))) ** 2, 1))
+                alphai = p['l_expected'] * np.minimum(1. / np.median(arnorm), 2. / (arnorm))
 
-
+                if not self.opts.madapt or not np.isfinite(alpha0.any()):
+                    alpha0 = 1
+                alphai[np.isfinite(alphai).all()] = 1
 
 
 lp = LpAdaption(xstart=[1, 1])
