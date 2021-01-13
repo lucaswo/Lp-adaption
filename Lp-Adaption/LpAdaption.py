@@ -79,6 +79,7 @@ class LpAdaption:
         p['pn'] = self.opts.pn
         p['p_empAll'] = 0
         p['p_empWindow'] = 0
+        p['N'] = self.N
 
         if self.opts.hitP_adapt_cond:
             p['pVec'] = self.opts.hitP_adapt['pVec']
@@ -153,7 +154,7 @@ class LpAdaption:
         numAcc = 1
         # Number of accepted points for specific hitP
         vNumAcc = 1
-        mu = self.xstart
+        mu = np.array(self.xstart)
 
         # ___________Setup Output Parameters_____________
         if self.isbSavingOn:
@@ -362,7 +363,8 @@ class LpAdaption:
 
             if numfeas >0:
                 #get alle feasable point from candidate solutions
-                pop = arx[:,c_T==1]
+                indexes = np.where(c_T==1)[0]
+                pop = arx[:,indexes]
                 weights = np.ones(shape=(numfeas,1))/numfeas # uniform weights
 
                 #count accepted solutions
@@ -387,6 +389,35 @@ class LpAdaption:
         #    Parallel Problem Solving from Nature, PPSN X,
         #    Proceedings, Springer. http://hal.inria.fr/inria-00287351/en/
         #_____________________________________________________________________________
+            #Adapt step size, (ball radius r)
+            # Depends on the number of feasable Points,
+            # Pseudo code line 15
+            r = r*p['ss']**numfeas * p['sf']**(p['popSize']-numfeas)
+            r = max(min(r,p['rMax']),p['rMin'])
+
+            # Adapt mu
+            mu_old = mu
+            # if feasable points found, adapt mean and finally proposal distribution...
+            if numfeas != 0 and self.opts.madapt:
+                #adapt mean, pseudo code line 17
+                mu = (1-1/p['N_mu'])*mu +np.reshape((1/p['N_mu'])*pop @ weights,(2,))
+
+                #Update evolution paths
+                if sum((invB*(mu-mu_old))**2).any() ==0:
+                    z=0
+                else:
+                    alpha0 = p['l_expected']/np.sqrt(sum((invB*(mu-mu_old))**2))
+                    #part of pseudo code line 19 alpha0(mu-mu_old), calculation of alph_j see Nikolaus,Hansen paper 2008
+                    z = alpha0*(mu-mu_old)
+            else:
+                z = 0
+
+            pc = (1-p['cp'])*pc +np.sqrt(p['cp']*(2-p['cp']))*z
+            s = pc * np.transpose(pc)
+
+
+
+
 
 lp = LpAdaption(xstart=[1, 1])
 lp.lpAdaption()

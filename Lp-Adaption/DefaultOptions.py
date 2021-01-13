@@ -114,6 +114,12 @@ class DefaultOptions:
         # of interest if hitP_adapt == True
         self.hitP_adapt_cond = False
 
+        #covariance adation
+        self.cadapt = True
+
+        # adapat mean
+        self.madapt = True
+
         if self.hitP_adapt_cond:
             self.__invoke_hitP_adaption()
 
