@@ -97,12 +97,12 @@ class LpAdaption:
         Q = np.array(self.opts.initQ)
         C = np.array(self.opts.initC)
         # C consistent calculated from Q for compairison with specified C
-        C_calc = p['r'] ** 2 * (Q * Q)
+        C_calc = p['r'] ** 2 * (Q @ Q)
         np.testing.assert_equal(C, C_calc, err_msg='Initialized C Matrix is not consistent with Matrix Q.\n'
                                                    'Your Q yields to the following C:' % C_calc)
         # check if C is positiv semidefinit
         # TODO: Maybe easier way
-        [Bo, tmp] = np.linalg.eig(C)
+        [tmp, Bo] = np.linalg.eig(C)
         tol = 1e-8
         vals, vecs = arpack.eigsh(C, k=2, which='BE')
         if not np.all(vals > -tol):
@@ -110,7 +110,7 @@ class LpAdaption:
         elif np.size(C, 1) != self.N:
             ValueError(' C has not the same size as your starting point xstart!')
 
-        diagD = np.sqrt(np.diag(tmp))
+        diagD = np.sqrt(tmp)
         detdiagD = np.prod(diagD)
         diagD = diagD / (detdiagD ** (1 / self.N))
         Q = Bo * (np.tile(diagD, (self.N, 1)))
@@ -119,8 +119,8 @@ class LpAdaption:
         # Anyway, we not cause the check is already above and not in an if/else statement(cause initC and
         # Q are always provided through default Options)
 
-        [j, eigVals] = np.linalg.eig(Q * np.transpose(Q))
-        condC = np.linalg.cond(Q * np.transpose(Q))
+        [eigVals, j] = np.linalg.eig(Q @ np.transpose(Q))
+        condC = np.linalg.cond(Q @ np.transpose(Q))
 
         # ___________Setup initial settings_____________
         # check if xstart is a feasable point
@@ -313,10 +313,10 @@ class LpAdaption:
         PopSizeOld = []
         lastEval = 1
 
-        [Bo, tmp] = np.linalg.eig(C)
-        diagD = np.sqrt(np.diag(tmp))
+        [tmp, Bo] = np.linalg.eig(C)
+        diagD = np.sqrt(tmp)
 
-        invB = np.diag(1 / diagD) * Bo
+        invB = np.diag(1 / diagD) @ Bo
         while counteval[-1] < (p['maxEval'] - p['popSize'] - lastEval):
             counteval = np.array(range(1, p['popSize'].astype('int'))) + counteval[-1]
 
@@ -365,7 +365,7 @@ class LpAdaption:
                 # get alle feasable point from candidate solutions
                 indexes = np.where(c_T == 1)[0]
                 pop = arx[:, indexes]
-                weights = np.ones(shape=(numfeas, 1)) / numfeas  # uniform weights
+                weights = np.ones(shape=(numfeas,)) / numfeas  # uniform weights
 
                 # count accepted solutions
                 numAcc = numAcc + numfeas
@@ -428,6 +428,75 @@ class LpAdaption:
                 if not self.opts.madapt or not np.isfinite(alpha0.any()):
                     alpha0 = 1
                 alphai[np.isfinite(alphai).all()] = 1
+
+                zmu = np.transpose(np.tile(alphai, (self.N, 1))) * (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))
+                cmu = zmu @ np.diag(weights) @ np.transpose(zmu)
+
+                l = np.add(p['ccov1'] * alpha_p * s, p['ccovmu'] * cmu)
+                C = (1 - p['ccov1'] - p['ccovmu']) * C + l
+                # Note that np.diag returns an array of eigenvalues and not a diagonal matrix with the eigvals like
+                # matlab!!!! It's not nessescary to extract the diagonal (np.diag(eigVals))
+                C = np.triu(C) + np.transpose(np.triu(C, 1))
+                [EV, Bo] = np.linalg.eig(C)
+                [EV, idx] = np.sort(EV)  # Vector of eigenvalues
+                diagD = np.sqrt(EV)
+                Bo = Bo[:, idx]
+
+                if not np.isfinite((diagD).all()):
+                    ValueError('function eig returned non-finited eigenvalues')
+                if not np.isfinite((Bo).all()):
+                    ValueError('function eig returned non-finited eigenvectors')
+
+                if condC < p['condMax'] and condC > 0:
+                    detdiagD = np.prod(diagD)  # normalize C
+                    diagD = diagD / (detdiagD ** (1 / p['N']))
+                    Q = Bo * np.diag(diagD)
+                    invB = np.diag(1 / diagD) * np.transpose(Bo)
+                elif counteval % self.opts.verboseModulo == 0:
+                    print('_______________________________________________\n'
+                          'Condition of C is too large and regularized \n'
+                          '_______________________________________________')
+                    # regularize Q
+                    Q = Q + (1 / self.N) * np.eye(self.N, self.N)
+
+                # Update Condition of C
+                QQ = Q @ np.transpose(Q)
+
+                try:
+                    eigVals, eigVecs = np.linalg.eig(QQ)
+                except:
+                    print(Q, counteval)
+
+                condC = max(eigVals) / min(eigVals)
+
+                if np.diag(eigVals).any() < 0:
+                    print('______________\n', '________________', saveInd, len(xRaw))
+                    if xRaw:
+                        print(xRaw[max(1, saveInd - 10):saveInd - 1, :])
+
+                    print('EigenVecs:', eigVecs, '\n',
+                          'EigenVals: ', eigVals, '\n'
+                                                  'CondC: ', condC, '\n',
+                          'det(Q): ', np.linalg.det(Q), '\n',
+                          'feasable points: ', numfeas, '\n',
+                          'QQ: ', QQ, '\n')
+                    UserWarning('C contains negative Eigenvalues')
+
+                    eigVals[eigVals < 0] = 1e-3
+                    Q = eigVecs.dot(np.transpose(eigVecs).dot(eigVals))
+                    C = r ** 2 * (Q @ np.transpose(Q))
+                    print('r: ', r,'\n',
+                          'alpha_i: ',alphai,'\n',
+                          'alpha0: ',alpha0,'\n',
+                          'mu_old: ', mu_old,'\n',
+                          'mu: ',mu, '\n',
+                          '___________________________\n__________________________')
+
+                #Save all accepted points!
+                if self.isbSavingOn:
+                    if numfeas >0:
+                        xAcc[saveIndAcc:(saveIndAcc+numfeas-1),:] = np.transpose(pop)
+                        #TODO: Implement saving all accepted point
 
 
 lp = LpAdaption(xstart=[1, 1])
