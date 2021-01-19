@@ -14,7 +14,7 @@ import OptionHandler as oh
 
 class LpAdaption:
 
-    def __init__(self, xstart: List, inopts=''):
+    def __init__(self,oracle, xstart: List, inopts=''):
         '''
 
         :param oracle: Python File in Inputs directory
@@ -429,7 +429,7 @@ class LpAdaption:
                     alpha0 = 1
                 alphai[np.isfinite(alphai).all()] = 1
 
-                zmu = np.transpose(np.tile(alphai, (self.N, 1))) * (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))
+                zmu = np.tile(alphai, (self.N,1)) * (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))
                 cmu = zmu @ np.diag(weights) @ np.transpose(zmu)
 
                 l = np.add(p['ccov1'] * alpha_p * s, p['ccovmu'] * cmu)
@@ -437,9 +437,10 @@ class LpAdaption:
                 # Note that np.diag returns an array of eigenvalues and not a diagonal matrix with the eigvals like
                 # matlab!!!! It's not nessescary to extract the diagonal (np.diag(eigVals))
                 C = np.triu(C) + np.transpose(np.triu(C, 1))
-                [EV, Bo] = np.linalg.eig(C)
-                [EV, idx] = np.sort(EV)  # Vector of eigenvalues
-                diagD = np.sqrt(EV)
+                ev,Bo = np.linalg.eig(C)
+                ev = np.sort(ev) # Vector of eigenvalues sorted
+                idx = np.argsort(ev) # Indexes for the sorted ev
+                diagD = np.sqrt(ev)
                 Bo = Bo[:, idx]
 
                 if not np.isfinite((diagD).all()):
@@ -495,9 +496,9 @@ class LpAdaption:
                 #Save all accepted points!
                 if self.isbSavingOn:
                     if numfeas >0:
-                        xAcc[saveIndAcc:(saveIndAcc+numfeas-1),:] = np.transpose(pop)
+                        xAcc[saveIndAcc:(saveIndAcc+numfeas),:] = np.transpose(pop)
                         #TODO: Implement saving all accepted point
 
 
-lp = LpAdaption(xstart=[1, 1])
+lp = LpAdaption(oracle=Oracles.Oracle,xstart=[1, 1])
 lp.lpAdaption()

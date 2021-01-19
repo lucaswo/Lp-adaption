@@ -4,7 +4,7 @@ import numpy as np
 Collection of functions for parameters that have to be calculated from other options
 Any parameter, that has to be evaluated from others, should be mentioned here
 '''
-
+#TODO: if the user wants to use a new function, then he/she has to declare the function here and in the opts json with str 'optionhandler'
 def get_numLast(parameters:Dict):
     num_last = max((parameters['maxEval'] - 1e3 * parameters['N']), parameters['maxEval'] * 0.7)
     return num_last
@@ -39,6 +39,9 @@ def get_sf(p:dict):
 
 def get_cp(p:dict):
     return 1/np.sqrt(p['N'])
+
+def get_oracle_inopts(p:dict):
+    return []
 
 #____________Set up Functions for Hitting probability adaption_____________
 

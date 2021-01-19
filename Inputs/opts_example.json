@@ -1,0 +1,31 @@
+{
+    "N": 3,
+    "maxEval": 300000,
+    "pn": 2,
+    "verboseModulo": 1e4,
+    "savingModulo": 150,
+
+    "hitP_adapt_cond": true,
+    "hitP_adapt": {
+        "Pvec": [
+            0.35,
+            0.15,
+            0.06,
+            0.03,
+            0.01,
+            0.005,
+            0.002,
+            0.001
+        ],
+        "fixedSchedule": false,
+        "numLastSchedule": [
+            0.5,
+            0.75,
+            0.75,
+            0.75,
+            0.75
+        ],
+        "meanOfLast": 0.25,
+        "deviation_stop": 0.005
+    }
+}

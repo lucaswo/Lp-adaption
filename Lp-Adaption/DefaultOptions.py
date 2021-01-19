@@ -163,7 +163,7 @@ class DefaultOptions:
             if type(value) == str:
                 setattr(self, option, re.sub('self\.','self\.opts\.',value))
             else:
-                ValueError('Option %s is not an appropriate option for Lp-Adaption')
+                ValueError('Option %s is not an appropriate option for Lp-Adaption'%option)
 
         return self
 
