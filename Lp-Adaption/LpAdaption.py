@@ -23,7 +23,7 @@ class LpAdaption:
         :param inopts: input options
         '''
 
-        self.oracle = Oracles.Oracle()
+        self.oracle = oracle
         # define dimension N trough starting point
         self.N = len(xstart)
         # load default options
@@ -124,7 +124,7 @@ class LpAdaption:
 
         # ___________Setup initial settings_____________
         # check if xstart is a feasable point
-        xstart_out = self.oracle.oracle(self.xstart)
+        xstart_out = self.oracle(self.xstart)
         len_x = len(xstart_out)
         # if dim of vector xstart and nOut Parameter differs, one might want to check the oracle
         if len_x != p['nOut']:
@@ -348,7 +348,7 @@ class LpAdaption:
             outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
 
             for s in range(0, p['popSize']):
-                outArgs = self.oracle.oracle(arx[:, s])
+                outArgs = self.oracle(arx[:, s])
                 c_T[s] = outArgs[0]
                 if p['nOut'] > 1:
                     if np.any(outArgs):
@@ -498,7 +498,6 @@ class LpAdaption:
                     if numfeas >0:
                         xAcc[saveIndAcc:(saveIndAcc+numfeas),:] = np.transpose(pop)
                         #TODO: Implement saving all accepted point
-
-
-lp = LpAdaption(oracle=Oracles.Oracle,xstart=[1, 1])
+O = Oracles.Oracle()
+lp = LpAdaption(oracle=O.oracle,xstart=[1, 1])
 lp.lpAdaption()
