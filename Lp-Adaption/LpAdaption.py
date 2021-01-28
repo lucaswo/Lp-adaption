@@ -124,8 +124,18 @@ class LpAdaption:
 
         # ___________Setup initial settings_____________
         # check if xstart is a feasable point
-        xstart_out = self.oracle(self.xstart)
-        len_x = len(xstart_out)
+        if self.opts.oracleInopts:
+            xstart_out = self.oracle(self.xstart,self.opts.oracleInopts)
+        else:
+            xstart_out = self.oracle(self.xstart)
+
+        try:
+            #if oracle returns a vector of zeros and ones
+            len_x = len(xstart_out)
+        except:
+            # oracle may returns only one int value, so put it into a list
+            xstart_out = [xstart_out]
+            len_x = 1
         # if dim of vector xstart and nOut Parameter differs, one might want to check the oracle
         if len_x != p['nOut']:
             UserWarning('Dimension of Oracle output differs from nOut option! nOut will be set so the len of xStart!')
@@ -138,7 +148,7 @@ class LpAdaption:
         counteval = [1]
         if self.opts.hitP_adapt_cond:
             vcounteval = [1]
-            vcountgeneration = 1
+            vcountgeneration = 0
 
             if self.opts.hitP_adapt['fixedSchedule']:
                 cntsave_Part = 1
@@ -148,7 +158,7 @@ class LpAdaption:
             # Number of accepted points after MaxEval - numLast points
             lastNumAcc = 0
 
-        countgeneration = 1
+        countgeneration = 0
 
         # Number of all accepted points equals one because we need to start with a feasible point!
         numAcc = 1
@@ -160,7 +170,7 @@ class LpAdaption:
         if self.isbSavingOn:
             xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), self.N)
             xRaw = np.empty(shape=xRawDim)
-            xRaw[0, :] = self.xstart
+            xRaw[0, :] = self.xstart[:,0]
             # save all accepted x to estimate the upper bound of the volume
             xAcc = np.empty((int(p['maxEval']), self.N))
             # counteval of all accepted x
@@ -241,7 +251,7 @@ class LpAdaption:
 
             # Vector of mu
             muVec = np.empty(shape=(tmp_num, self.N))
-            muVec[0, :] = mu
+            muVec[0, :] = mu[:,0]
 
             # Vector of Volumina of the Lp Balls
             volVec = np.zeros(shape=(tmp_num, 1))
@@ -318,10 +328,10 @@ class LpAdaption:
 
         invB = np.diag(1 / diagD) @ Bo
         while counteval[-1] < (p['maxEval'] - p['popSize'] - lastEval):
-            counteval = np.array(range(1, p['popSize'].astype('int'))) + counteval[-1]
+            counteval = np.array(range(1, p['popSize'].astype('int')+1)) + counteval[-1]
 
             if self.opts.hitP_adapt_cond:
-                vcounteval = np.array(range(1, p['popSize'].astype('int'))) + vcounteval[-1]
+                vcounteval = np.array(range(0, p['popSize'].astype('int'))) + vcounteval[-1]+1
                 vcountgeneration += 1
 
             countgeneration += 1
@@ -333,7 +343,7 @@ class LpAdaption:
                 arz = np.transpose(LpBall(dim=self.N, pnorm=p['pn']).samplefromball(number=p['popSize']))
 
             # sampled vectors as input for oracle
-            v = np.transpose(np.tile(mu, (p['popSize'].astype('int'), 1)))
+            v = np.tile(mu, (1,p['popSize'].astype('int')))
             arx = np.add(v, r * (Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
@@ -348,7 +358,11 @@ class LpAdaption:
             outArgsMat = np.empty(shape=(p['popSize'].astype('int'), p['nOut'] - 1))
 
             for s in range(0, p['popSize']):
-                outArgs = self.oracle(arx[:, s])
+                if self.opts.oracleInopts:
+                    outArgs = self.oracle(arx[:, s].reshape(self.N,1),self.opts.oracleInopts)
+                else:
+                    outArgs = self.oracle(arx[:,s].reshape(self.N,1))
+
                 c_T[s] = outArgs[0]
                 if p['nOut'] > 1:
                     if np.any(outArgs):
@@ -498,6 +512,4 @@ class LpAdaption:
                     if numfeas >0:
                         xAcc[saveIndAcc:(saveIndAcc+numfeas),:] = np.transpose(pop)
                         #TODO: Implement saving all accepted point
-O = Oracles.Oracle()
-lp = LpAdaption(oracle=O.oracle,xstart=[1, 1])
-lp.lpAdaption()
+

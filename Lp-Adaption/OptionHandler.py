@@ -49,10 +49,10 @@ def get_stepSize_mean(p:dict):
     return min(18 / p['valP'], p['maxMeanSize'])
 
 def get_hitP_mean(p:dict):
-    return min(18 / p['valP'], p['maxMeanSize'])
+    return min(30 / p['valP'], p['maxMeanSize'])
 
 def get_volApprox_mean(p:dict):
-    return min(30 / p['valP'], p['maxMeanSize'])
+    return min(18 / p['valP'], p['maxMeanSize'])
 
 def get_testStart(p:dict):
     return max([2*p['hitP_adapt']['stepSize']['meanSize'],

@@ -200,5 +200,3 @@ class DefaultOptions:
         return attr_dict
 
 
-
-

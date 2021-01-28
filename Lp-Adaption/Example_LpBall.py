@@ -17,8 +17,10 @@ class LpBallExample():
         pn2 = 1
         r2 = 1
         mu2 = np.zeros(shape=(self.dim, 1))
-        q2 = np.diag(np.sqrt(np.logspace([0, 3, 3])))
+        q2 = np.diag(np.sqrt(np.logspace(0, 3, 3)))
         q2 = q2 / (np.linalg.det(q2) ** (1 / self.dim))
+
+        self.optsDict['oracleInopts'] = (pn2,r2,mu2,q2)
 
         # true volume
         vol_t = Vol_lp.vol_lp(self.dim, r2, pn2)
@@ -28,15 +30,15 @@ class LpBallExample():
         for i in range(1, numRep):
             print('_____________ Repitition:', i, '______________')
             tmp = LpBallSampling.LpBall(self.dim, pn2).samplefromball(number=1)
-            xstart = mu2 + r2 * (q2 @ tmp)
-
-            out = LpAdaption.LpAdaption(self.oracle, xstart, inopts=self.optsDict)
+            xstart = mu2 + r2 * (q2 @ np.transpose(tmp))
+            l = LpAdaption.LpAdaption(self.oracle, xstart, inopts=self.optsDict)
+            out = l.lpAdaption()
             outCell.append(out)
 
-        volvec = np.empty(shape=(numRep, len(self.optsDict['PVec'])))
+        volvec = np.empty(shape=(numRep, len(self.optsDict['hitP_adapt']['Pvec'])))
         # TODO plotting
 
-    def oracle(self, x, np, r, mu, q):
+    def oracle(self, x,inopts):
         """
         :param x: candidate solutions -> matric with column vetors as candidate solutions
         :param np: p-norm of lp ball
@@ -46,15 +48,16 @@ class LpBallExample():
         :return: 1 if x is inside LP Ball, 0 else
                 When x was a matrix, the output is a vector of 0s and 1s
         """
+        pn, r, mu, q = inopts
         if len(x[:, 0]) == 1:
             xtest = np.linalg.inv(q) / r * (x - mu)
-            if np > 100:
+            if pn > 100:
                 if max(np.abs(xtest)) <= 1:
                     return 1
                 else:
                     return 0
             else:
-                if sum(np.abs(xtest) ** np) ** (1 / np) <= 1:
+                if sum(np.abs(xtest) ** np) ** (1 / pn) <= 1:
                     return 1
                 else:
                     return 0
@@ -63,7 +66,10 @@ class LpBallExample():
             b = (x - np.tile(mu, (1, number)))
             xtest = np.linalg.inv(q) / b * r
 
-            if np > 100:
-                return (np.max(np.abs(xtest), axis=1) <= 1).astype('int')
+            if pn > 100:
+                return [(np.max(np.abs(xtest), axis=1) <= 1).astype('int')]
             else:
-                return np.transpose(np.sum(np.abs(xtest) ** np) ** (1 / np) <= 1).astype('int')
+                return [np.transpose(np.sum(np.abs(xtest) ** pn) ** (1 / pn) <= 1).astype('int')]
+
+l = LpBallExample(dim=3,pnorm=2)
+l.lp_adaption()
