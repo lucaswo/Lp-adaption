@@ -168,7 +168,7 @@ class LpAdaption:
 
         # ___________Setup Output Parameters_____________
         if self.isbSavingOn:
-            xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), self.N)
+            xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], self.N)
             xRaw = np.empty(shape=xRawDim)
             xRaw[0, :] = self.xstart[:, 0]
             # save all accepted x to estimate the upper bound of the volume
@@ -191,17 +191,17 @@ class LpAdaption:
                     fxNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
 
             # Vector, if sample was accepted or not
-            c_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), 1))
+            c_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], 1))
             c_TVec[0] = xstart_out[0]
 
             # if output length of oracle is bigger than one, the following oracle values have to be saved
             if p['nOut'] > 1:
-                fc_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), p['nOut'] - 1))
+                fc_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], p['nOut'] - 1))
                 fc_TVec[0, :] = xstart_out[1:]
 
             # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
             # TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
-            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), 1))
+            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], 1))
             countVec[0] = 1
 
             # TODO: in Matlab just a 1x1 cell for double value, init. here usefull?
@@ -393,7 +393,7 @@ class LpAdaption:
             else:
                 cntEvalWindow = min(counteval[-1], p['windowSize'] * p['popSize'])
                 p['p_empAll'] = numAcc / counteval[-1]
-                p_empVecWindow = numAccWindow / cntEvalWindow
+                p['p_empWindow'] = numAccWindow / cntEvalWindow
 
             if van == 0:
                 p['mueff'] = numfeas
@@ -536,8 +536,7 @@ class LpAdaption:
                         saveIndNotAcc = saveIndNotAcc + numunfeas
 
                     # save r, mu and possible Q only one each iteration (all candidate solutions are sampled from same distribution)
-                    if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) \
-                            or counteval[-1] > (p['maxEval'] - p['popSize'] - lastEval):
+                    if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) or counteval[-1] > (p['maxEval'] - p['popSize'] - lastEval):
                         rVec[saveIndGeneration] = r
                         muVec[saveIndGeneration] = mu.reshape(self.N, )
                         volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, r, p['pn'])
@@ -546,3 +545,82 @@ class LpAdaption:
                         # save evaluation number for which r, mu (Q) are stored
                         p_empVecAll[saveIndGeneration] = p['p_empAll']
                         p_empVecWindow[saveIndGeneration] = p['p_empWindow']
+
+                        if self.opts.bSaveCov:
+                            qCell.append(Q)
+
+
+                        saveIndGeneration +=1
+
+                        if not PopSizeOld:
+                            #c_TVec[saveInd:saveInd+p['popSize']] = c_T
+                            if p['nOut']>1:
+                                fc_TVec[saveInd:saveInd+p['popSize'],:] = outArgsMat
+                            xRaw[saveInd:saveInd+p['popSize'],:] = arx.T
+                            countVec[saveInd:saveInd+p['popSize']] = counteval.reshape(p['popSize'],1)
+                            saveInd+=p['popSize']
+                        else: #if popsize changed with changed hitting probability
+                            c_TVec[saveInd:saveInd+PopSizeOld] = c_T
+                            if p['nOut']>1:
+                                fc_TVec[saveInd:saveInd+PopSizeOld,:] = outArgsMat
+                            xRaw[saveInd:saveInd+PopSizeOld,:] = arx.T
+                            countVec[saveInd:saveInd+PopSizeOld] = counteval.reshape(PopSizeOld,1)
+                            saveInd+=PopSizeOld
+                            PopSizeOld = []
+
+
+                if countgeneration % verboseModuloGen ==0:
+                    print('________________________________________________________________________________')
+                    print('    Number of Iterations: %d'%counteval[-1])
+                    print('    P_accAll (Acceptance probability): %d'%p['p_empWindow'])
+                    print('    Search radius: %d'%p['r'])
+
+        #Save Final outputs
+
+        if self.isbSavingOn:
+            out = {}
+            out['xRaw'] = xRaw[0:saveInd,:]
+            out['c_TVec'] = c_TVec[0:saveInd]
+            if p['nOut']>1:
+                out['fc_TVec'] = fc_TVec[0:saveInd,:]
+                out['fxAcc'] = fxAcc[0:saveInd,:]
+            out['countVec'] = countVec[0:saveInd]
+            out['cntAcc'] = cntAcc[0:saveInd,:]
+            out['xAcc'] = cntAcc[0:saveInd, :]
+            out['cntAccGen'] = cntAccGen[0:saveInd, :]
+
+            out['countevalLast'] = counteval[-1]
+
+            if self.opts.unfeasibleSave:
+                out['xNotAcc'] = xNotAcc[0:saveIndNotAcc, :]
+                out['cntNotAcc'] = cntNotAcc[0:saveIndNotAcc, :]
+                if p['nOut'] > 1:
+                    out['fxNotAcc'] = fxNotAcc[0:saveIndNotAcc, :]
+
+            out['cntVec'] = cntVec[0:saveIndGeneration]
+            out['rVec'] = rVec[0:saveIndGeneration]
+            out['muVec'] = muVec[0:saveIndGeneration,:]
+            out['p_empVecAll'] = p_empVecAll[0:saveIndGeneration]
+            out['p_empVecWindow'] = p_empVecWindow[0:saveIndGeneration]
+            out['volVec'] = volVec[0:saveIndGeneration]
+
+            if self.opts.bSaveCov:
+                out['qCell'] = qCell[1:saveIndGeneration]
+
+            #out['stopFlag'] = stopFlagcell
+
+            if not self.opts.hitP_adapt_cond:
+                r = np.mean(rLast[0:saveIndLast])
+                mu = np.mean(muLast[0:saveIndLast])
+            else:
+
+
+
+
+
+
+
+
+
+
+
