@@ -27,7 +27,7 @@ class LpBallExample():
         numRep = 2
         outCell = []
 
-        for i in range(1, numRep):
+        for i in range(0, numRep):
             print('_____________ Repitition:', i, '______________')
             tmp = LpBallSampling.LpBall(self.dim, pn2).samplefromball(number=1)
             xstart = mu2 + r2 * (q2 @ np.transpose(tmp))
@@ -49,20 +49,20 @@ class LpBallExample():
                 When x was a matrix, the output is a vector of 0s and 1s
         """
         pn, r, mu, q = inopts
-        if len(x[:, 0]) == 1:
-            xtest = np.linalg.inv(q) / r * (x - mu)
+        if x.shape[1] == 1:
+            xtest = np.linalg.inv(q)/r @ (x - mu)
             if pn > 100:
                 if max(np.abs(xtest)) <= 1:
-                    return 1
+                    return [1]
                 else:
-                    return 0
+                    return [0]
             else:
-                if sum(np.abs(xtest) ** np) ** (1 / pn) <= 1:
-                    return 1
+                if sum(np.abs(xtest) ** pn) ** (1 / pn) <= 1:
+                    return [1]
                 else:
-                    return 0
+                    return [0]
         else:
-            number = len(x[:, 0])
+            number = x.shape[1]
             b = (x - np.tile(mu, (1, number)))
             xtest = np.linalg.inv(q) / b * r
 

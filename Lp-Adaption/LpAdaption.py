@@ -14,7 +14,7 @@ import OptionHandler as oh
 
 class LpAdaption:
 
-    def __init__(self,oracle, xstart: List, inopts=''):
+    def __init__(self, oracle, xstart: List, inopts=''):
         '''
 
         :param oracle: Python File in Inputs directory
@@ -125,12 +125,12 @@ class LpAdaption:
         # ___________Setup initial settings_____________
         # check if xstart is a feasable point
         if self.opts.oracleInopts:
-            xstart_out = self.oracle(self.xstart,self.opts.oracleInopts)
+            xstart_out = self.oracle(self.xstart, self.opts.oracleInopts)
         else:
             xstart_out = self.oracle(self.xstart)
 
         try:
-            #if oracle returns a vector of zeros and ones
+            # if oracle returns a vector of zeros and ones
             len_x = len(xstart_out)
         except:
             # oracle may returns only one int value, so put it into a list
@@ -170,7 +170,7 @@ class LpAdaption:
         if self.isbSavingOn:
             xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int'), self.N)
             xRaw = np.empty(shape=xRawDim)
-            xRaw[0, :] = self.xstart[:,0]
+            xRaw[0, :] = self.xstart[:, 0]
             # save all accepted x to estimate the upper bound of the volume
             xAcc = np.empty((int(p['maxEval']), self.N))
             # counteval of all accepted x
@@ -243,7 +243,7 @@ class LpAdaption:
             cntVec[0] = 1
 
             # TODO Find out if next line of code (comment) is needed, matlab code not sure
-            saveIndGeneration = 2
+            saveIndGeneration = 1
 
             # Vector of step length
             rVec = np.zeros(shape=(tmp_num, 1))
@@ -251,7 +251,7 @@ class LpAdaption:
 
             # Vector of mu
             muVec = np.empty(shape=(tmp_num, self.N))
-            muVec[0, :] = mu[:,0]
+            muVec[0, :] = mu[:, 0]
 
             # Vector of Volumina of the Lp Balls
             volVec = np.zeros(shape=(tmp_num, 1))
@@ -307,10 +307,11 @@ class LpAdaption:
             cnt_all = np.empty(shape=(np.ceil(p['maxEval'] / p['popSize']).astype('int'), 1))
             cnt_all[0] = 1
         # gets 1 if change of hitP occurs TODO: relevant, notwendig?
+        # Starting indices are one instead of two! Python indices!
         van = 0
-        saveInd = 2
-        saveIndAcc = 2
-        saveIndNotAcc = 1  # everything starts with feasable point
+        saveInd = 1
+        saveIndAcc = 1
+        saveIndNotAcc = 0  # everything starts with feasable point
         stopFlag = ''
         if not (self.opts.hitP_adapt_cond and not self.opts.hitP_adapt['fixedSchedule']):
             saveIndLast = 0  # number of iterations after max eval - numLast evaluations
@@ -328,10 +329,10 @@ class LpAdaption:
 
         invB = np.diag(1 / diagD) @ Bo
         while counteval[-1] < (p['maxEval'] - p['popSize'] - lastEval):
-            counteval = np.array(range(1, p['popSize'].astype('int')+1)) + counteval[-1]
+            counteval = np.array(range(1, p['popSize'].astype('int') + 1)) + counteval[-1]
 
             if self.opts.hitP_adapt_cond:
-                vcounteval = np.array(range(0, p['popSize'].astype('int'))) + vcounteval[-1]+1
+                vcounteval = np.array(range(0, p['popSize'].astype('int'))) + vcounteval[-1] + 1
                 vcountgeneration += 1
 
             countgeneration += 1
@@ -343,7 +344,7 @@ class LpAdaption:
                 arz = np.transpose(LpBall(dim=self.N, pnorm=p['pn']).samplefromball(number=p['popSize']))
 
             # sampled vectors as input for oracle
-            v = np.tile(mu, (1,p['popSize'].astype('int')))
+            v = np.tile(mu, (1, p['popSize'].astype('int')))
             arx = np.add(v, r * (Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
@@ -359,9 +360,9 @@ class LpAdaption:
 
             for s in range(0, p['popSize']):
                 if self.opts.oracleInopts:
-                    outArgs = self.oracle(arx[:, s].reshape(self.N,1),self.opts.oracleInopts)
+                    outArgs = self.oracle(arx[:, s].reshape(self.N, 1), self.opts.oracleInopts)
                 else:
-                    outArgs = self.oracle(arx[:,s].reshape(self.N,1))
+                    outArgs = self.oracle(arx[:, s].reshape(self.N, 1))
 
                 c_T[s] = outArgs[0]
                 if p['nOut'] > 1:
@@ -379,7 +380,7 @@ class LpAdaption:
                 # get alle feasable point from candidate solutions
                 indexes = np.where(c_T == 1)[0]
                 pop = arx[:, indexes]
-                weights = np.ones(shape=(numfeas,)) / numfeas  # uniform weights
+                weights = np.ones(shape=(numfeas, 1)) / numfeas  # uniform weights
 
                 # count accepted solutions
                 numAcc = numAcc + numfeas
@@ -391,7 +392,7 @@ class LpAdaption:
                 # TODO: Immplement hittingP Adaption
             else:
                 cntEvalWindow = min(counteval[-1], p['windowSize'] * p['popSize'])
-                p_empAll = numAcc / counteval[-1]
+                p['p_empAll'] = numAcc / counteval[-1]
                 p_empVecWindow = numAccWindow / cntEvalWindow
 
             if van == 0:
@@ -412,13 +413,13 @@ class LpAdaption:
             # Pseudo code line 15
             r = r * p['ss'] ** numfeas * p['sf'] ** (p['popSize'] - numfeas)
             r = max(min(r, p['rMax']), p['rMin'])
-
+            p['r'] = r
             # Adapt mu
             mu_old = mu
             # if feasable points found, adapt mean and finally proposal distribution...
             if numfeas != 0 and self.opts.madapt:
                 # adapt mean, pseudo code line 17
-                mu = (1 - 1 / p['N_mu']) * mu + np.reshape((1 / p['N_mu']) * pop @ weights, (2,))
+                mu = (1 - 1 / p['N_mu']) * mu + (1 / p['N_mu']) * pop @ weights
 
                 # Update evolution paths
                 if sum((invB * (mu - mu_old)) ** 2).any() == 0:
@@ -436,24 +437,24 @@ class LpAdaption:
             # Adapt Covariance C
             if numfeas > 0 and self.opts.cadapt:  # No adaption of C if now feasable solution in Population
                 # TODO Check calculation at np tile
-                arnorm = np.sqrt(sum((invB @ (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))) ** 2, 1))
+                arnorm = np.sqrt(sum((invB @ (pop - np.tile(mu_old, (1, numfeas)))) ** 2, 1))
                 alphai = p['l_expected'] * np.minimum(1. / np.median(arnorm), 2. / (arnorm))
 
                 if not self.opts.madapt or not np.isfinite(alpha0.any()):
                     alpha0 = 1
                 alphai[np.isfinite(alphai).all()] = 1
 
-                zmu = np.tile(alphai, (self.N,1)) * (pop - np.transpose(np.tile(mu_old, (numfeas, 1))))
-                cmu = zmu @ np.diag(weights) @ np.transpose(zmu)
+                zmu = np.tile(alphai, (self.N, 1)) * (pop - np.tile(mu_old, (1, numfeas)))
+                cmu = zmu @ np.diag(weights.reshape(numfeas, )) @ np.transpose(zmu)
 
                 l = np.add(p['ccov1'] * alpha_p * s, p['ccovmu'] * cmu)
                 C = (1 - p['ccov1'] - p['ccovmu']) * C + l
                 # Note that np.diag returns an array of eigenvalues and not a diagonal matrix with the eigvals like
                 # matlab!!!! It's not nessescary to extract the diagonal (np.diag(eigVals))
                 C = np.triu(C) + np.transpose(np.triu(C, 1))
-                ev,Bo = np.linalg.eig(C)
-                ev = np.sort(ev) # Vector of eigenvalues sorted
-                idx = np.argsort(ev) # Indexes for the sorted ev
+                ev, Bo = np.linalg.eig(C)
+                ev = np.sort(ev)  # Vector of eigenvalues sorted
+                idx = np.argsort(ev)  # Indexes for the sorted ev
                 diagD = np.sqrt(ev)
                 Bo = Bo[:, idx]
 
@@ -467,7 +468,7 @@ class LpAdaption:
                     diagD = diagD / (detdiagD ** (1 / p['N']))
                     Q = Bo * np.diag(diagD)
                     invB = np.diag(1 / diagD) * np.transpose(Bo)
-                elif counteval % self.opts.verboseModulo == 0:
+                elif (counteval % self.opts.verboseModulo).any() == 0:
                     print('_______________________________________________\n'
                           'Condition of C is too large and regularized \n'
                           '_______________________________________________')
@@ -500,16 +501,48 @@ class LpAdaption:
                     eigVals[eigVals < 0] = 1e-3
                     Q = eigVecs.dot(np.transpose(eigVecs).dot(eigVals))
                     C = r ** 2 * (Q @ np.transpose(Q))
-                    print('r: ', r,'\n',
-                          'alpha_i: ',alphai,'\n',
-                          'alpha0: ',alpha0,'\n',
-                          'mu_old: ', mu_old,'\n',
-                          'mu: ',mu, '\n',
+                    print('r: ', r, '\n',
+                          'alpha_i: ', alphai, '\n',
+                          'alpha0: ', alpha0, '\n',
+                          'mu_old: ', mu_old, '\n',
+                          'mu: ', mu, '\n',
                           '___________________________\n__________________________')
 
-                #Save all accepted points!
+                # Save all accepted points!
                 if self.isbSavingOn:
-                    if numfeas >0:
-                        xAcc[saveIndAcc:(saveIndAcc+numfeas),:] = np.transpose(pop)
-                        #TODO: Implement saving all accepted point
+                    if numfeas > 0:
+                        xAcc[saveIndAcc:(saveIndAcc + numfeas), :] = np.transpose(pop)
+                        if p['nOut'] > 1:
+                            indexes = np.where(c_T == 1)[0]
+                            fxAcc[saveIndAcc:(saveIndAcc + numfeas - 1), :] = outArgsMat[:, indexes]
+                        indexes = np.where(c_T == 1)[0]
+                        cntAcc[saveIndAcc:saveIndAcc + numfeas, 0] = counteval[indexes]
+                        cntAccGen[saveIndAcc:saveIndAcc + numfeas, 0] = countgeneration
+                        saveIndAcc = saveIndAcc + numfeas
 
+                    if self.opts.unfeasibleSave:
+                        if arx.shape[1] != p['popSize']:
+                            # TODO. check if cntAdapt -1 or not -1
+                            numunfeas = popSizeVec[cntAdapt] - numfeas
+                        else:
+                            numunfeas = p['popSize'] - numfeas
+                        if numunfeas > 0:
+                            indexes = np.where(c_T == 0)
+                            xNotAcc[saveIndNotAcc:saveIndNotAcc + numfeas, :] = arx[:indexes].T
+                            cntNotAcc[saveIndNotAcc:saveIndNotAcc + numfeas, :] = counteval[:, indexes]
+                            if p['nOut'] > 1:
+                                fxNotAcc[saveIndNotAcc:saveIndNotAcc + numunfeas, :]
+
+                        saveIndNotAcc = saveIndNotAcc + numunfeas
+
+                    # save r, mu and possible Q only one each iteration (all candidate solutions are sampled from same distribution)
+                    if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) \
+                            or counteval[-1] > (p['maxEval'] - p['popSize'] - lastEval):
+                        rVec[saveIndGeneration] = r
+                        muVec[saveIndGeneration] = mu.reshape(self.N, )
+                        volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, r, p['pn'])
+                        cntVec[saveIndGeneration] = counteval[-1]
+
+                        # save evaluation number for which r, mu (Q) are stored
+                        p_empVecAll[saveIndGeneration] = p['p_empAll']
+                        p_empVecWindow[saveIndGeneration] = p['p_empWindow']
