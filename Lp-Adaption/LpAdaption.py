@@ -84,7 +84,51 @@ class LpAdaption:
         if self.opts.hitP_adapt_cond:
             p['pVec'] = self.opts.hitP_adapt['pVec']
             p['lpVec'] = len(p['pVec'])
-            # TODO Implement adaptable hitting probability rest
+
+            if self.opts.hitP_adapt['fixedSchedule']:
+                p['maxEvalSchedule'] = self.opts.hitP_adapt['maxEvalSchedule']
+                p['numLastSchedule'] = self.opts.hitP_adapt['numLastSchedule']
+
+                # check that pVev has same len as vectors max Eval schedule
+                if len(p['pVec']) != len(p['numLastSchedule']):
+                    ValueError('vectors opts.para_hitP_adapt.PVec, opts.para_hitP_adapt.maxEvalSchedule and '
+                               'opts.para_hitP_adapt.numLastSchedule need to be of the same length')
+
+                # values in maxEvalSchedule should sum up to 1
+                if sum(p['maxEvalSchedule']) != 1.0:
+                    UserWarning('Values in maxEvalSchedule should sum up to one')
+
+                if any(p['numLastSchedule'])<0.1 or any(p['numLastSchedule'])<0.9:
+                    UserWarning('n numLastSchedule you can specify which portion of the samples should be used for '
+                                'calculation of final mean and radius. It should be in [0.1,0.9]. Will be changed!')
+                    p['numLastSchedule'][p['numLastSchedule'] < 0.1] = 0.1
+                    p['numLastSchedule'][p['numLastSchedule'] < 0.9] = 0.9
+                    print(p['numLastSchedule'])
+
+            else:  # no fixed schedule
+                if self.opts.hitP_adapt['meanOfLast'] < 0 or self.opts.hitP_adapt['meanOfLast'] > 1:
+                    defopts_meanoflast = DefaultOptions(self.N).hitP_adapt['meanOfLast']
+                    UserWarning('hitP adaption parameter mean of last shopuld be in [0,1], it\'s changed to %d'
+                                % defopts_meanoflast)
+                    self.opts.hitP_adapt['meanOfLast'] = defopts_meanoflast
+
+                deviation_stepSize = self.opts.hitP_adapt['stepSize']['deviation']
+                deviation_VolApprox = self.opts.hitP_adapt['VolApprox']['deviation']
+                deviation_hitP = self.opts.hitP_adapt['hitP']['deviation']
+                deviation_stop = self.opts.hitP_adapt['deviation_stop']
+
+                testEveryGen = np.ceil(self.opts.hitP_adapt['testEvery'] / p['popSize'])
+                testStartGen = np.ceil(self.opts.hitP_adapt['testStart'] / p['popSize'])
+
+                meanSize_stepSizeGen = np.ceil(self.opts.hitP_adapt['stepSize']['meanSize'] / p['popSize'])
+                meanSize_VolApproxGen = np.ceil(self.opts.hitP_adapt['VolApprox']['meanSize'] / p['popSize'])
+                meanSize_hitPGen = np.ceil(self.opts.hitP_adapt['hitP']['meanSize'] / p['popSize'])
+
+                if testStartGen < 2 * max([meanSize_stepSizeGen, meanSize_VolApproxGen, meanSize_hitPGen]):
+                    UserWarning('opts.para_hitP_adapt.testStart needs to be at least 2 times bigger '
+                                'than opts.para_hitP_adapt....meanSize')
+                    testStartGen = 2 * max([meanSize_stepSizeGen, meanSize_VolApproxGen, meanSize_hitPGen])
+
         else:
             numLast = self.opts.numLast
             # Check, that numLast is smaller than MaxEval
@@ -390,7 +434,47 @@ class LpAdaption:
 
             if self.opts.hitP_adapt_cond:
                 rVec_all[countgeneration] = r
-                # TODO: Immplement hittingP Adaption
+                if van == 1:
+                    p['p_empAll'] = p['valP']
+                    p['p_empWindow'] = p['valP']
+                    numMuVec = np.zeros(windowSize,1)
+                    numMuVec[np.remainder(vcountgeneration,windowSize)+1] = numfeas
+                    van =0
+                else:
+                    p['p_empAll'] = vNumAcc/vcounteval[-1]
+                    cntEvalWindow = min(vcounteval[-1],p['windowSize']*p['popSize'])
+                    p['p_empWindow'] = numAccWindow/cntEvalWindow
+
+                hitP_all[countgeneration] = p['p_empWindow']
+                cnt_all[countgeneration] = counteval[-1]
+
+                if self.opts.hitP_adapt['fixedSchedule']:
+                    if vcounteval[-1] > (maxEval_Part - numLast_Part):
+                        muLast[cntsave_Part] =mu
+                    #TODO implement fixed schedule Matlab code 542-608
+                    else:
+                        #no fixed schedule for adaptation of hitting probability
+                        #save mu,r to get an average later
+                        muLast[vcountgeneration] = mu
+                        rLast =[vcountgeneration] = r
+                        p_empLast[vcountgeneration] = p['p_empWindow']
+
+                        if (vcountgeneration > testStartGen) and (countgeneration%testEveryGen==0) or \
+                            counteval[-1]>= (p ['maxEval']-p['popSize']-lastEval):
+
+                            mean1 = np.mean(rVec_all[countgeneration-2*meanSize_stepSizeGen+1:
+                                                     countgeneration-meanSize_stepSizeGen])
+                            mean2 = np.mean(rVec_all[countgeneration-1*meanSize_stepSizeGen+1:countgeneration])
+                            #also check hitting probability
+                            mean3 = np.mean(hitP_all[(countgeneration-2*meanSize_hitPGen+1):
+                                                     (countgeneration-meanSize_hitPGen)])
+                            mean4 = np.mean(hitP_all[countgeneration-1*meanSize_stepSizeGen+1:countgeneration])
+                            #TODO: left line 622-751
+
+
+
+
+
             else:
                 cntEvalWindow = min(counteval[-1], p['windowSize'] * p['popSize'])
                 p['p_empAll'] = numAcc / counteval[-1]
@@ -572,7 +656,7 @@ class LpAdaption:
                 if countgeneration % verboseModuloGen == 0:
                     print('________________________________________________________________________________')
                     print('    Number of Iterations: %d' % counteval[-1])
-                    print('    P_accAll (Acceptance probability): %d' % p['p_empWindow'])
+                    print('    P_accAll (Acceptance probability): ', p['p_empWindow'][0])
                     print('    Search radius: %d' % p['r'])
 
         # Save Final outputs
@@ -661,7 +745,7 @@ class LpAdaption:
             if not self.opts.hitP_adapt_cond:
                 out['P_empAll'] = numAcc / counteval[-1]
 
-                Vtest = vol_lp(self.N, r, p['pn']) * out['P_empAllall']
+                Vtest = vol_lp(self.N, r, p['pn']) * out['P_empAll']
                 out['VolTest'] = Vtest
                 out['lastQ'] = Q
                 out['lastR'] = r
@@ -677,5 +761,5 @@ class LpAdaption:
             out['oracle'] = self.oracle
 
             # ____________________Ending Message_________________________________________
-            print('     Acceptance probability: %d' % p['p_empWindow'])
+            print('     Acceptance probability: ', p['p_empWindow'])
             print('     Stop Flag: %s' % stopFlag)

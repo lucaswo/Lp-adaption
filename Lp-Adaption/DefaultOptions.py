@@ -2,6 +2,8 @@ import numpy as np
 import json
 import re
 import OptionHandler as oh
+
+
 class DefaultOptions:
     """
     This class handles all default parameters for the Lp_Adaption.
@@ -53,15 +55,15 @@ class DefaultOptions:
         # Save unfeasable Solutions
         self.unfeasibleSave = False
 
-        #how many of numLast elements are used to get average mu and r
+        # how many of numLast elements are used to get average mu and r
         self.numLast = oh.get_numLast(self.__dict__)
 
-        #how many covariances should be used to get average covariance
+        # how many covariances should be used to get average covariance
         self.averageCovNum = 100
 
         # options concerning algorithmic parameters:
-        #---------------------------------------------
-        #Hitting Probability
+        # ---------------------------------------------
+        # Hitting Probability
         self.valP = 1 / np.exp(1)
 
         #  upper bound on inverval's size over which averaging happens ???
@@ -73,7 +75,7 @@ class DefaultOptions:
         # Initial Covariance
         self.r = 1
 
-        #init Cholesky and Corvariance matrix
+        # init Cholesky and Corvariance matrix
         self.initQ = np.eye(N).tolist()
         self.initC = np.eye(N).tolist()
 
@@ -81,15 +83,15 @@ class DefaultOptions:
 
         self.minR = 0
 
-        self.maxCond = 1e20*N
+        self.maxCond = 1e20 * N
 
-        #Mean apdaption weight
+        # Mean apdaption weight
         self.N_mu = oh.get_N_mu(self.__dict__)
 
-        #Matrix adaption weight
-        self.N_C = ((N+1.3)**2+1)/2
+        # Matrix adaption weight
+        self.N_C = ((N + 1.3) ** 2 + 1) / 2
 
-    #TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
+        # TODO find out why gamma population size can be also np.floor(2 / self.valP) --> not in default mentioned in paper
         self.popSize = oh.get_Pop_size(self.__dict__)
         # Learning rate beta line 6 in pseudocode
         self.beta = oh.get_beta(self.__dict__)
@@ -100,21 +102,21 @@ class DefaultOptions:
         # Contraction f_c otherwise (line 8)
         self.sf = oh.get_sf(self.__dict__)
 
-        #learning rate rank-one update, when CMA
-        #Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
-        #mueff hardcoded to one in Lp Adaption, mueff will be changed through the algorithm
+        # learning rate rank-one update, when CMA
+        # Note Matlab uses: CMA.ccov1 --> see if pendent nessecary here, why should adaption be off?
+        # mueff hardcoded to one in Lp Adaption, mueff will be changed through the algorithm
         self.mueff = 1
         self.ccov1 = oh.get_ccov1(self.__dict__)
         self.ccovmu = oh.get_ccovmu(self.__dict__)
 
-        #CMA learning constant for rank-one update
+        # CMA learning constant for rank-one update
         self.cp = oh.get_cp(self.__dict__)
 
-        #1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
+        # 1: adapt hittin probability (to get a more accurate volume estimation or to get a better design center)
         # of interest if hitP_adapt == True
         self.hitP_adapt_cond = False
 
-        #covariance adation
+        # covariance adation
         self.cadapt = True
 
         # adapat mean
@@ -124,50 +126,53 @@ class DefaultOptions:
             self.__invoke_hitP_adaption()
 
 
-
-    def __invoke_hitP_adaption(self):
+    def __invoke_hitP_adaption(self, opts: dict):
         self.hitP_adapt = {}
+
         self.hitP_adapt['pVec'] = [0.35, 0.15, 0.06, 0.03, 0.01]
         self.hitP_adapt['fixedSchedule'] = True
         self.hitP_adapt['maxEvalSchedule'] = [1 / 2, 1 / 8, 1 / 8, 1 / 8, 1 / 8]
         self.hitP_adapt['numLastSchedule'] = [1 / 2, 3 / 4, 3 / 4, 3 / 4, 3 / 4]
         self.hitP_adapt['testEvery'] = oh.get_hitP_mean(self.__dict__)
 
-        self.hitP_adapt['stepSize'] = {'meanSize':oh.get_stepSize_mean(self.__dict__),'deviation': 0.001}
+        self.hitP_adapt['stepSize'] = {'meanSize': oh.get_stepSize_mean(self.__dict__), 'deviation': 0.001}
         self.hitP_adapt['hitP'] = {'meanSize': oh.get_hitP_mean(self.__dict__), 'deviation': 0.001}
         self.hitP_adapt['VolApprox'] = {'meanSize': oh.get_volApprox_mean(self.__dict__), 'deviation': 0.001}
 
-        self.hitP_adapt['testStart'] =oh.get_testStart(self.__dict__)
+        self.hitP_adapt['testStart'] = oh.get_testStart(self.__dict__)
 
         self.hitP_adapt['meanOfLast'] = 1 / 4
         self.hitP_adapt['deviation_stop'] = 0.01
+        self.hitP_adapt.update(opts)
 
-    def adaptOption(self,inopts:dict):
+
+    def adaptOption(self, inopts: dict):
         '''
         :param inopts: dictionary of options that differ to the default options, initialized above
         :return: dict with options
         '''
-        for option,value in inopts.items():
-            if hasattr(self,option):
-                setattr(self,option,value)
+        for option, value in inopts.items():
+            if hasattr(self, option) or option == 'hitP_adapt':
                 # when adpation of hitting probability should be made, the class attributes has to be invoked
                 # Note that the attributes will be invoked when given even if the cond is False
-                if option == 'hitP_adapt_cond' and value == True or option == 'hitP_adapt' and value:
-                    if option == 'hitP_adapt' and value and self.hitP_adapt_cond==False :
+                if option == 'hitP_adapt_cond' and value is False:
+                    if inopts['hitP_adapt']:
                         UserWarning('You want to initialize the options for the hitting pobability adaption, '
                                     'although condition is False. We set it for you. You might want to check, whether '
                                     'you want the options or not.')
                         self.hitP_adapt_cond = True
 
-                    self.__invoke_hitP_adaption()
+                elif option == 'hitP_adapt' and self.hitP_adapt_cond is True:
+                    self.__invoke_hitP_adaption(value)
+                else:
+                    setattr(self, option, value)
+
             if type(value) == str:
-                setattr(self, option, re.sub('self\.','self\.opts\.',value))
+                setattr(self, option, re.sub('self\.', 'self\.opts\.', value))
             else:
-                ValueError('Option %s is not an appropriate option for Lp-Adaption'%option)
+                ValueError('Option %s is not an appropriate option for Lp-Adaption' % option)
 
         return self
-
-
 
     def evaluateOpts(self):
         '''
@@ -178,19 +183,19 @@ class DefaultOptions:
             Thus they should stay and evaluatable string
         '''
 
-        for opt,value in self.__dict__.items():
+        for opt, value in self.__dict__.items():
             if type(value) == str:
-                setattr(self,opt,eval(value))
+                setattr(self, opt, eval(value))
             elif type(value) == dict:
-                attr = self.__resolve_dict(getattr(self,opt))
-                setattr(self,opt,attr)
+                attr = self.__resolve_dict(getattr(self, opt))
+                setattr(self, opt, attr)
             else:
                 continue
 
         return self
 
-    def __resolve_dict(self,attr_dict):
-        for key,value in attr_dict.items():
+    def __resolve_dict(self, attr_dict):
+        for key, value in attr_dict.items():
             if type(value) == str:
                 attr_dict[key] = eval(value)
             elif type(value) == dict:
@@ -198,5 +203,3 @@ class DefaultOptions:
             else:
                 continue
         return attr_dict
-
-
