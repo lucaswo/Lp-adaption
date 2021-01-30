@@ -168,7 +168,7 @@ class LpAdaption:
 
         # ___________Setup Output Parameters_____________
         if self.isbSavingOn:
-            xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], self.N)
+            xRawDim = (np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int') * p['popSize'], self.N)
             xRaw = np.empty(shape=xRawDim)
             xRaw[0, :] = self.xstart[:, 0]
             # save all accepted x to estimate the upper bound of the volume
@@ -191,17 +191,18 @@ class LpAdaption:
                     fxNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
 
             # Vector, if sample was accepted or not
-            c_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], 1))
+            c_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int') * p['popSize'], 1))
             c_TVec[0] = xstart_out[0]
 
             # if output length of oracle is bigger than one, the following oracle values have to be saved
             if p['nOut'] > 1:
-                fc_TVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], p['nOut'] - 1))
+                fc_TVec = np.empty(
+                    shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int') * p['popSize'], p['nOut'] - 1))
                 fc_TVec[0, :] = xstart_out[1:]
 
             # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
             # TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
-            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int')*p['popSize'], 1))
+            countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int') * p['popSize'], 1))
             countVec[0] = 1
 
             # TODO: in Matlab just a 1x1 cell for double value, init. here usefull?
@@ -278,7 +279,7 @@ class LpAdaption:
 
                 hitPLastVec = np.empty(shape=(p['lpVec'], 1))
                 sizeLastVec = np.empty(shape=(p['lpVec'], 1))
-                approxVolLastVec = np.empty(shape=(p['lpVec'], 1))
+                approxVolVec = np.empty(shape=(p['lpVec'], 1))
 
                 if self.opts.hitP_adapt['fixedSchedule']:
                     maxEval_Part = np.floor(self.opts.hitP_adapt['maxEvalSchedule'][cntAdapt]) * p['maxEval']
@@ -536,7 +537,8 @@ class LpAdaption:
                         saveIndNotAcc = saveIndNotAcc + numunfeas
 
                     # save r, mu and possible Q only one each iteration (all candidate solutions are sampled from same distribution)
-                    if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) or counteval[-1] > (p['maxEval'] - p['popSize'] - lastEval):
+                    if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) or counteval[-1] > (
+                            p['maxEval'] - p['popSize'] - lastEval):
                         rVec[saveIndGeneration] = r
                         muVec[saveIndGeneration] = mu.reshape(self.N, )
                         volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, r, p['pn'])
@@ -549,43 +551,41 @@ class LpAdaption:
                         if self.opts.bSaveCov:
                             qCell.append(Q)
 
-
-                        saveIndGeneration +=1
+                        saveIndGeneration += 1
 
                         if not PopSizeOld:
-                            #c_TVec[saveInd:saveInd+p['popSize']] = c_T
-                            if p['nOut']>1:
-                                fc_TVec[saveInd:saveInd+p['popSize'],:] = outArgsMat
-                            xRaw[saveInd:saveInd+p['popSize'],:] = arx.T
-                            countVec[saveInd:saveInd+p['popSize']] = counteval.reshape(p['popSize'],1)
-                            saveInd+=p['popSize']
-                        else: #if popsize changed with changed hitting probability
-                            c_TVec[saveInd:saveInd+PopSizeOld] = c_T
-                            if p['nOut']>1:
-                                fc_TVec[saveInd:saveInd+PopSizeOld,:] = outArgsMat
-                            xRaw[saveInd:saveInd+PopSizeOld,:] = arx.T
-                            countVec[saveInd:saveInd+PopSizeOld] = counteval.reshape(PopSizeOld,1)
-                            saveInd+=PopSizeOld
+                            # c_TVec[saveInd:saveInd+p['popSize']] = c_T
+                            if p['nOut'] > 1:
+                                fc_TVec[saveInd:saveInd + p['popSize'], :] = outArgsMat
+                            xRaw[saveInd:saveInd + p['popSize'], :] = arx.T
+                            countVec[saveInd:saveInd + p['popSize']] = counteval.reshape(p['popSize'], 1)
+                            saveInd += p['popSize']
+                        else:  # if popsize changed with changed hitting probability
+                            c_TVec[saveInd:saveInd + PopSizeOld] = c_T
+                            if p['nOut'] > 1:
+                                fc_TVec[saveInd:saveInd + PopSizeOld, :] = outArgsMat
+                            xRaw[saveInd:saveInd + PopSizeOld, :] = arx.T
+                            countVec[saveInd:saveInd + PopSizeOld] = counteval.reshape(PopSizeOld, 1)
+                            saveInd += PopSizeOld
                             PopSizeOld = []
 
-
-                if countgeneration % verboseModuloGen ==0:
+                if countgeneration % verboseModuloGen == 0:
                     print('________________________________________________________________________________')
-                    print('    Number of Iterations: %d'%counteval[-1])
-                    print('    P_accAll (Acceptance probability): %d'%p['p_empWindow'])
-                    print('    Search radius: %d'%p['r'])
+                    print('    Number of Iterations: %d' % counteval[-1])
+                    print('    P_accAll (Acceptance probability): %d' % p['p_empWindow'])
+                    print('    Search radius: %d' % p['r'])
 
-        #Save Final outputs
+        # Save Final outputs
 
         if self.isbSavingOn:
             out = {}
-            out['xRaw'] = xRaw[0:saveInd,:]
+            out['xRaw'] = xRaw[0:saveInd, :]
             out['c_TVec'] = c_TVec[0:saveInd]
-            if p['nOut']>1:
-                out['fc_TVec'] = fc_TVec[0:saveInd,:]
-                out['fxAcc'] = fxAcc[0:saveInd,:]
+            if p['nOut'] > 1:
+                out['fc_TVec'] = fc_TVec[0:saveInd, :]
+                out['fxAcc'] = fxAcc[0:saveInd, :]
             out['countVec'] = countVec[0:saveInd]
-            out['cntAcc'] = cntAcc[0:saveInd,:]
+            out['cntAcc'] = cntAcc[0:saveInd, :]
             out['xAcc'] = cntAcc[0:saveInd, :]
             out['cntAccGen'] = cntAccGen[0:saveInd, :]
 
@@ -599,7 +599,7 @@ class LpAdaption:
 
             out['cntVec'] = cntVec[0:saveIndGeneration]
             out['rVec'] = rVec[0:saveIndGeneration]
-            out['muVec'] = muVec[0:saveIndGeneration,:]
+            out['muVec'] = muVec[0:saveIndGeneration, :]
             out['p_empVecAll'] = p_empVecAll[0:saveIndGeneration]
             out['p_empVecWindow'] = p_empVecWindow[0:saveIndGeneration]
             out['volVec'] = volVec[0:saveIndGeneration]
@@ -607,20 +607,75 @@ class LpAdaption:
             if self.opts.bSaveCov:
                 out['qCell'] = qCell[1:saveIndGeneration]
 
-            #out['stopFlag'] = stopFlagcell
+            out['stopFlagCell'] = stopFlag
 
             if not self.opts.hitP_adapt_cond:
                 r = np.mean(rLast[0:saveIndLast])
                 mu = np.mean(muLast[0:saveIndLast])
+            else:  # if hitP was adapted
+                adaption = {}
+                adaption['ccovmu'] = ccovmu_Vec[0:cntAdapt]
+                adaption['cntGenVec'] = cntGenVec[0:cntAdapt]
+                adaption['ccov1'] = ccov1Vec[0:cntAdapt]
+                adaption['popSizeVec'] = popSizeVec[0:cntAdapt]
+
+                adaption['N_muVec'] = n_MuVec[0:cntAdapt]
+                adaption['betaVec'] = betaVec[0:cntAdapt]
+                adaption['ssVec'] = ssVec[0:cntAdapt]
+                adaption['sfVec'] = sfVec[0:cntAdapt]
+
+                adaption['iterVec'] = iterVec[0:cntAdapt]
+
+                adaption['muLastVec'] = muLastVec[0:cntAdapt]
+                adaption['rLastVec'] = rLastVec[0:cntAdapt]
+                adaption['qLastcell'] = qLastCell[0:cntAdapt]
+                adaption['hitPLastvec'] = hitPLastVec[0:cntAdapt]
+                adaption['sizeLastVec'] = sizeLastVec[0:cntAdapt]
+                adaption['approxVolVec'] = approxVolVec[0:cntAdapt]
+
+                adaption['rVec_all'] = rVec_all
+                adaption['hitP_all'] = hitP_all
+                adaption['cnt_all'] = cnt_all
+                out['adaption'] = adaption
+
+            if self.opts.lastSaveAll and self.opts.hitP_adapt_cond:
+                # TODO Find out where this outLast comes from
+                outLast = []
+                out['outlast'] = outLast
+
+            # test if mean(last_mu) is in feasable region --> IF REGION is nonconvex this is possible
+
+            if self.opts.oracleInopts:
+                oracleOut = self.oracle.oracle(mu, self.opts.oracleInopts)
+                c_T = oracleOut[0]
             else:
+                c_T = self.oracle.oracle(mu)[0]
 
+            if c_T != 1:
+                UserWarning('last mu is not in feasible region!')
 
+            # ____________________________Set Output _____________________________
 
+            out['stopFlag'] = stopFlag
 
+            if not self.opts.hitP_adapt_cond:
+                out['P_empAll'] = numAcc / counteval[-1]
 
+                Vtest = vol_lp(self.N, r, p['pn']) * out['P_empAllall']
+                out['VolTest'] = Vtest
+                out['lastQ'] = Q
+                out['lastR'] = r
+                out['lastMu'] = mu
+            else:
+                if self.isbSavingOn:
+                    out['lastMu'] = out['adaption']['muLastVec']
+                    out['lastR'] = out['adaption']['rLastVec']
 
+            out['P_emp'] = p['p_empAll']
+            out['P_empWindow'] = p['p_empWindow']
+            out['opts'] = self.opts
+            out['oracle'] = self.oracle
 
-
-
-
-
+            # ____________________Ending Message_________________________________________
+            print('     Acceptance probability: %d' % p['p_empWindow'])
+            print('     Stop Flag: %s' % stopFlag)
