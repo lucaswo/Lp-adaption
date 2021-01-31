@@ -10,6 +10,7 @@ from LpBallSampling import LpBall
 from PlotData import PlotData
 from numpy import matlib
 import OptionHandler as oh
+from Lowner import lowner
 
 
 class LpAdaption:
@@ -98,7 +99,7 @@ class LpAdaption:
                 if sum(p['maxEvalSchedule']) != 1.0:
                     UserWarning('Values in maxEvalSchedule should sum up to one')
 
-                if any(p['numLastSchedule'])<0.1 or any(p['numLastSchedule'])<0.9:
+                if any(p['numLastSchedule']) < 0.1 or any(p['numLastSchedule']) < 0.9:
                     UserWarning('n numLastSchedule you can specify which portion of the samples should be used for '
                                 'calculation of final mean and radius. It should be in [0.1,0.9]. Will be changed!')
                     p['numLastSchedule'][p['numLastSchedule'] < 0.1] = 0.1
@@ -437,39 +438,69 @@ class LpAdaption:
                 if van == 1:
                     p['p_empAll'] = p['valP']
                     p['p_empWindow'] = p['valP']
-                    numMuVec = np.zeros(windowSize,1)
-                    numMuVec[np.remainder(vcountgeneration,windowSize)+1] = numfeas
-                    van =0
+                    numMuVec = np.zeros(windowSize, 1)
+                    numMuVec[np.remainder(vcountgeneration, windowSize) + 1] = numfeas
+                    van = 0
                 else:
-                    p['p_empAll'] = vNumAcc/vcounteval[-1]
-                    cntEvalWindow = min(vcounteval[-1],p['windowSize']*p['popSize'])
-                    p['p_empWindow'] = numAccWindow/cntEvalWindow
+                    p['p_empAll'] = vNumAcc / vcounteval[-1]
+                    cntEvalWindow = min(vcounteval[-1], p['windowSize'] * p['popSize'])
+                    p['p_empWindow'] = numAccWindow / cntEvalWindow
 
                 hitP_all[countgeneration] = p['p_empWindow']
                 cnt_all[countgeneration] = counteval[-1]
 
                 if self.opts.hitP_adapt['fixedSchedule']:
                     if vcounteval[-1] > (maxEval_Part - numLast_Part):
-                        muLast[cntsave_Part] =mu
-                    #TODO implement fixed schedule Matlab code 542-608
+                        muLast[cntsave_Part] = mu
+                    # TODO implement fixed schedule Matlab code 542-608
                     else:
-                        #no fixed schedule for adaptation of hitting probability
-                        #save mu,r to get an average later
+                        # no fixed schedule for adaptation of hitting probability
+                        # save mu,r to get an average later
                         muLast[vcountgeneration] = mu
-                        rLast =[vcountgeneration] = r
+                        rLast = [vcountgeneration] = r
                         p_empLast[vcountgeneration] = p['p_empWindow']
 
-                        if (vcountgeneration > testStartGen) and (countgeneration%testEveryGen==0) or \
-                            counteval[-1]>= (p ['maxEval']-p['popSize']-lastEval):
+                        if (vcountgeneration > testStartGen) and (countgeneration % testEveryGen == 0) or \
+                                counteval[-1] >= (p['maxEval'] - p['popSize'] - lastEval):
 
-                            mean1 = np.mean(rVec_all[countgeneration-2*meanSize_stepSizeGen+1:
-                                                     countgeneration-meanSize_stepSizeGen])
-                            mean2 = np.mean(rVec_all[countgeneration-1*meanSize_stepSizeGen+1:countgeneration])
-                            #also check hitting probability
-                            mean3 = np.mean(hitP_all[(countgeneration-2*meanSize_hitPGen+1):
-                                                     (countgeneration-meanSize_hitPGen)])
-                            mean4 = np.mean(hitP_all[countgeneration-1*meanSize_stepSizeGen+1:countgeneration])
-                            #TODO: left line 622-751
+                            mean1 = np.mean(rVec_all[countgeneration - 2 * meanSize_stepSizeGen + 1:
+                                                     countgeneration - meanSize_stepSizeGen])
+                            mean2 = np.mean(rVec_all[countgeneration - 1 * meanSize_stepSizeGen + 1:countgeneration])
+                            # also check hitting probability
+                            mean3 = np.mean(hitP_all[(countgeneration - 2 * meanSize_hitPGen + 1):
+                                                     (countgeneration - meanSize_hitPGen)])
+                            mean4 = np.mean(hitP_all[countgeneration - 1 * meanSize_stepSizeGen + 1:countgeneration])
+
+                            if np.abs(mean1 - mean2) / (mean1 / 2 + mean2 / 2) < deviation_stepSize and np.abs(
+                                mean3 - mean4) / (mean3 / 2 + mean4 / 2) < deviation_stepSize or counteval[-1] >= p[
+                                'maxEval'] - p['popSize'] - lastEval:
+                                # check if volume approximation allows for adadatation of hitting Probability
+
+                                try:
+                                    iidx1 = cntAccGen[cntAccGen<=(countgeneration-meanSize_VolApproxGen),0][-1]
+                                except:
+                                    if not iidx1:
+                                        iidx1=1
+                                try:
+                                    iidx2 = cntAccGen[cntAccGen<=(countgeneration-1),0][-1]
+                                except:
+                                    if not iidx2:
+                                        iidx2=1
+
+                                x1 = xAcc[0:iidx1]
+                                x2 = xAcc[0:iidx2]
+
+                                if x1.shape[0]>1 and x2.shape[0]>1:
+                                    epsLJ = 1e1
+
+                                    #loewner of x1
+                                    e = lowner(x1.T,epsLJ)
+                                    c_loewner = np.linalg.inv(e)
+                                    vol_loewner_x1 = vol_lp(self.N,1,2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
+                                    # loewner of x2
+                                    e = lowner(x2.T, epsLJ)
+                                    c_loewner = np.linalg.inv(e)
+                                    vol_loewner_x1 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
 
 
 
