@@ -472,36 +472,65 @@ class LpAdaption:
                             mean4 = np.mean(hitP_all[countgeneration - 1 * meanSize_stepSizeGen + 1:countgeneration])
 
                             if np.abs(mean1 - mean2) / (mean1 / 2 + mean2 / 2) < deviation_stepSize and np.abs(
-                                mean3 - mean4) / (mean3 / 2 + mean4 / 2) < deviation_stepSize or counteval[-1] >= p[
+                                    mean3 - mean4) / (mean3 / 2 + mean4 / 2) < deviation_stepSize or counteval[-1] >= p[
                                 'maxEval'] - p['popSize'] - lastEval:
                                 # check if volume approximation allows for adadatation of hitting Probability
 
                                 try:
-                                    iidx1 = cntAccGen[cntAccGen<=(countgeneration-meanSize_VolApproxGen),0][-1]
+                                    iidx1 = cntAccGen[cntAccGen <= (countgeneration - meanSize_VolApproxGen), 0][-1]
                                 except:
                                     if not iidx1:
-                                        iidx1=1
+                                        iidx1 = 1
                                 try:
-                                    iidx2 = cntAccGen[cntAccGen<=(countgeneration-1),0][-1]
+                                    iidx2 = cntAccGen[cntAccGen <= (countgeneration - 1), 0][-1]
                                 except:
                                     if not iidx2:
-                                        iidx2=1
+                                        iidx2 = 1
 
                                 x1 = xAcc[0:iidx1]
                                 x2 = xAcc[0:iidx2]
 
-                                if x1.shape[0]>1 and x2.shape[0]>1:
+                                if x1.shape[0] > 1 and x2.shape[0] > 1:
                                     epsLJ = 1e1
 
-                                    #loewner of x1
-                                    e = lowner(x1.T,epsLJ)
+                                    # loewner of x1
+                                    e = lowner(x1.T, epsLJ)
                                     c_loewner = np.linalg.inv(e)
-                                    vol_loewner_x1 = vol_lp(self.N,1,2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
+                                    vol_loewner_x1 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
                                     # loewner of x2
                                     e = lowner(x2.T, epsLJ)
                                     c_loewner = np.linalg.inv(e)
-                                    vol_loewner_x1 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
+                                    vol_loewner_x2 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
 
+                                    # axis alligned bounding box x1
+                                    mini = np.min(x1)
+                                    maxi = np.max(x1)
+                                    vol_bb_x1 = np.prod(abs(maxi - mini))
+
+                                    # axis alligned bounding box x2
+                                    mini = np.min(x2)
+                                    maxi = np.max(x2)
+                                    vol_bb_x2 = np.prod(abs(maxi - mini))
+
+                                    if (np.abs(vol_loewner_x1 - vol_loewner_x2) / (
+                                            vol_loewner_x1 / 2 + vol_loewner_x2 / 2) < deviation_VolApprox and np.abs(
+                                        vol_bb_x1 - vol_bb_x2) / (
+                                                vol_bb_x1 / 2 + vol_bb_x2 / 2) < deviation_VolApprox) or counteval[
+                                        -1] >= p['maxEval'] - p['popSize'] - lastEval:
+
+                                        # save r, Q, hitP
+                                        if cntAdapt > 1:
+                                            numLastVec = np.arange(np.ceil(cntGenVec[cntAdapt - 1] + (
+                                                        vcountgeneration - cntGenVec[cntAdapt - 1]) * (
+                                                                                       1 - self.opts.hitP_adapt[
+                                                                                   'meanOfLast'])),
+                                                                   vcountgeneration + 1)
+                                        else:
+                                            numLastVec = np.arange(vcountgeneration - np.floor(
+                                                vcountgeneration * self.opts.hitP_adapt['meanOfLast']) + 1,
+                                                                   vcountgeneration)
+
+                                        
 
 
 
