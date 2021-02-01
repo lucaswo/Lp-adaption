@@ -35,7 +35,7 @@ def get_ss(p:dict):
     return 1 + p['beta']*(1-p['valP'])
 
 def get_sf(p:dict):
-    return 1 - p['beta']*(p['valP'])
+    return 1 - p['beta']*p['valP']
 
 def get_cp(p:dict):
     return 1/np.sqrt(p['N'])

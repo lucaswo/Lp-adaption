@@ -33,15 +33,14 @@ def lowner(a,tol):
     (n,m) = a.shape
     if n<1:
         ValueError('Input must be in one dimension or higher.')
-
-    F = khachiyan([a,np.ones(shape=(1,m))],tol)
+    F = khachiyan(np.vstack((a,np.ones(shape=(1,m)))),tol)
     A = F[0:n,0:n]
-    b = F[0:n,-1]
-    c = np.linalg.lstsq(-A, b)
-    E = A/(1-c.T*b-F[-1])
+    b = F[0:n,-1].reshape(n,1)
+    c = np.linalg.lstsq(-A, b)[0].reshape(n,1)
+    E = A/((1-c.T)@b.reshape(n,1)-F[-1,-1])
 
     ac = a - np.tile(c,(1,m))
-    return E/(np.max(np.dot(ac,E@ac,1)))
+    return E/(np.max(np.sum(ac*(E@ac),axis=0)))
 
 
 
@@ -50,16 +49,16 @@ def khachiyan(a,tol):
     (n, m) = a.shape
     if n<2:
         ValueError('n must be 2 or higher!')
-    elif not np.real(a):
+    elif not np.real(a).all():
         ValueError('inputs mus be real')
     elif not (np.real(tol) and tol>0):
         ValueError('Tolerance must be positive')
 
     invA = m * np.linalg.inv(a@a.T)
-    w = np.dot(a, invA@a, 1)
+    w = np.sum(a*(invA@a),axis=0).reshape(1,m)
 
     while True:
-        [w_r, r] = np.max(w),np.argmax(w)
+        w_r, r = np.max(w),np.argmax(w)
         f = w_r/n
         eps = f-1
         if eps<=tol:

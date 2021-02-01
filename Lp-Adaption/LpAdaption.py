@@ -71,7 +71,7 @@ class LpAdaption:
         p['l_expected'] = np.sqrt(self.N)
         p['windowSize'] = np.ceil(self.opts.windowSizeEval).astype('int')
         p['beta'] = self.opts.beta
-        p['ss'] = self.opts.ss
+        p['ss'] = np.round(self.opts.ss,decimals=5)
         p['sf'] = self.opts.sf
         p['r'] = self.opts.r
         p['rMax'] = self.opts.maxR
@@ -81,6 +81,7 @@ class LpAdaption:
         p['p_empAll'] = 0
         p['p_empWindow'] = 0
         p['N'] = self.N
+        p['maxMeanSize'] = self.opts.maxMeanSize
 
         if self.opts.hitP_adapt_cond:
             p['pVec'] = self.opts.hitP_adapt['pVec']
@@ -118,12 +119,12 @@ class LpAdaption:
                 deviation_hitP = self.opts.hitP_adapt['hitP']['deviation']
                 deviation_stop = self.opts.hitP_adapt['deviation_stop']
 
-                testEveryGen = np.ceil(self.opts.hitP_adapt['testEvery'] / p['popSize'])
-                testStartGen = np.ceil(self.opts.hitP_adapt['testStart'] / p['popSize'])
+                testEveryGen = np.ceil(self.opts.hitP_adapt['testEvery'] / p['popSize']).astype('int')
+                testStartGen = np.ceil(self.opts.hitP_adapt['testStart'] / p['popSize']).astype('int')
 
-                meanSize_stepSizeGen = np.ceil(self.opts.hitP_adapt['stepSize']['meanSize'] / p['popSize'])
-                meanSize_VolApproxGen = np.ceil(self.opts.hitP_adapt['VolApprox']['meanSize'] / p['popSize'])
-                meanSize_hitPGen = np.ceil(self.opts.hitP_adapt['hitP']['meanSize'] / p['popSize'])
+                meanSize_stepSizeGen = np.ceil(self.opts.hitP_adapt['stepSize']['meanSize'] / p['popSize']).astype('int')
+                meanSize_VolApproxGen = np.ceil(self.opts.hitP_adapt['VolApprox']['meanSize'] / p['popSize']).astype('int')
+                meanSize_hitPGen = np.ceil(self.opts.hitP_adapt['hitP']['meanSize'] / p['popSize']).astype('int')
 
                 if testStartGen < 2 * max([meanSize_stepSizeGen, meanSize_VolApproxGen, meanSize_hitPGen]):
                     UserWarning('opts.para_hitP_adapt.testStart needs to be at least 2 times bigger '
@@ -145,6 +146,8 @@ class LpAdaption:
         C_calc = p['r'] ** 2 * (Q @ Q)
         np.testing.assert_equal(C, C_calc, err_msg='Initialized C Matrix is not consistent with Matrix Q.\n'
                                                    'Your Q yields to the following C:' % C_calc)
+        '''
+        Only nessecary if C is provided and Q not --° here not the case, because of Default Options
         # check if C is positiv semidefinit
         # TODO: Maybe easier way
         [tmp, Bo] = np.linalg.eig(C)
@@ -152,17 +155,19 @@ class LpAdaption:
         vals, vecs = arpack.eigsh(C, k=2, which='BE')
         if not np.all(vals > -tol):
             ValueError('Covariance Matrix need tobe positiv semidefinit!')
-        elif np.size(C, 1) != self.N:
-            ValueError(' C has not the same size as your starting point xstart!')
-
+       
+    
         diagD = np.sqrt(tmp)
         detdiagD = np.prod(diagD)
         diagD = diagD / (detdiagD ** (1 / self.N))
         Q = Bo * (np.tile(diagD, (self.N, 1)))
-        r = np.linalg.det(C) ** (1 / 2 * self.N)
+        p['r'] = np.linalg.det(C) ** (1 / 2 * self.N)
+        '''
         # matlab checks for the same size of C and xstart here again
         # Anyway, we not cause the check is already above and not in an if/else statement(cause initC and
         # Q are always provided through default Options)
+        if np.size(C, 1) != self.N:
+            ValueError(' C has not the same size as your starting point xstart!')
 
         [eigVals, j] = np.linalg.eig(Q @ np.transpose(Q))
         condC = np.linalg.cond(Q @ np.transpose(Q))
@@ -270,7 +275,7 @@ class LpAdaption:
                 sfVec = np.empty(shape=(p['lpVec'], 1))
                 sfVec[0] = p['sf']
                 iterVec = np.empty(shape=(p['lpVec'], 1))
-                windowSize = np.ceil(self.opts.windowSizeEval / p['popSize'])
+                windowSize = np.ceil(self.opts.windowSizeEval / p['popSize']).astype('int')
                 ccov1Vec = np.empty(shape=(p['lpVec'], 1))
                 ccov1Vec[0] = p['ccov1']
                 ccovmu_Vec = np.empty(shape=(p['lpVec'], 1))
@@ -391,7 +396,7 @@ class LpAdaption:
 
             # sampled vectors as input for oracle
             v = np.tile(mu, (1, p['popSize'].astype('int')))
-            arx = np.add(v, r * (Q @ arz))
+            arx = np.add(v, p['r'] * (Q @ arz))
 
             if self.isPlottingOn and self.isbSavingOn:
                 plot = PlotData()
@@ -419,8 +424,8 @@ class LpAdaption:
 
             # numfeas candidate solutions are in feasable region
             numfeas = np.sum(c_T == 1)
-            numMuVec[(countgeneration % p['windowSize'])] = numfeas
-            numAccWindow = sum(numMuVec)
+            numMuVec[countgeneration % p['windowSize']] = numfeas
+            numAccWindow = np.sum(numMuVec)
 
             if numfeas > 0:
                 # get alle feasable point from candidate solutions
@@ -434,12 +439,12 @@ class LpAdaption:
                     vNumAcc = vNumAcc + numfeas
 
             if self.opts.hitP_adapt_cond:
-                rVec_all[countgeneration] = r
+                rVec_all[countgeneration] = p['r']
                 if van == 1:
                     p['p_empAll'] = p['valP']
                     p['p_empWindow'] = p['valP']
-                    numMuVec = np.zeros(windowSize, 1)
-                    numMuVec[np.remainder(vcountgeneration, windowSize) + 1] = numfeas
+                    numMuVec = np.zeros(shape=(p['windowSize'], 1))
+                    numMuVec[np.remainder(vcountgeneration, p['windowSize'])] = numfeas
                     van = 0
                 else:
                     p['p_empAll'] = vNumAcc / vcounteval[-1]
@@ -453,88 +458,170 @@ class LpAdaption:
                     if vcounteval[-1] > (maxEval_Part - numLast_Part):
                         muLast[cntsave_Part] = mu
                     # TODO implement fixed schedule Matlab code 542-608
-                    else:
-                        # no fixed schedule for adaptation of hitting probability
-                        # save mu,r to get an average later
+                else:
+                    # no fixed schedule for adaptation of hitting probability
+                    # save mu,r to get an average later
+                    try:
                         muLast[vcountgeneration] = mu
-                        rLast = [vcountgeneration] = r
+                        rLast = [vcountgeneration] = p['r']
+                        p_empLast[vcountgeneration] = p['p_empWindow']
+                    except:
+                        muLast = np.zeros(shape=(300000, 3,1))
+                        rLast = np.zeros(shape=(300000,1))
+                        p_empLast = np.zeros(shape=(300000,1))
+                        muLast[vcountgeneration,:] = mu
+                        rLast[vcountgeneration] = p['r']
                         p_empLast[vcountgeneration] = p['p_empWindow']
 
-                        if (vcountgeneration > testStartGen) and (countgeneration % testEveryGen == 0) or \
-                                counteval[-1] >= (p['maxEval'] - p['popSize'] - lastEval):
+                    if (vcountgeneration > testStartGen) and (countgeneration % testEveryGen == 0) or \
+                            counteval[-1] >= (p['maxEval'] - p['popSize'] - lastEval):
 
-                            mean1 = np.mean(rVec_all[countgeneration - 2 * meanSize_stepSizeGen + 1:
-                                                     countgeneration - meanSize_stepSizeGen])
-                            mean2 = np.mean(rVec_all[countgeneration - 1 * meanSize_stepSizeGen + 1:countgeneration])
-                            # also check hitting probability
-                            mean3 = np.mean(hitP_all[(countgeneration - 2 * meanSize_hitPGen + 1):
-                                                     (countgeneration - meanSize_hitPGen)])
-                            mean4 = np.mean(hitP_all[countgeneration - 1 * meanSize_stepSizeGen + 1:countgeneration])
+                        mean1 = np.mean(rVec_all[int(countgeneration - 2 * meanSize_stepSizeGen + 1):int(countgeneration - meanSize_stepSizeGen)])
+                        mean2 = np.mean(rVec_all[int(countgeneration - 1 * meanSize_stepSizeGen + 1):int(countgeneration)])
+                        # also check hitting probability
+                        mean3 = np.mean(hitP_all[int(countgeneration - 2 * meanSize_hitPGen + 1):
+                                                 int(countgeneration - meanSize_hitPGen)])
+                        mean4 = np.mean(hitP_all[int(countgeneration - 1 * meanSize_stepSizeGen + 1):int(countgeneration)])
 
-                            if np.abs(mean1 - mean2) / (mean1 / 2 + mean2 / 2) < deviation_stepSize and np.abs(
-                                    mean3 - mean4) / (mean3 / 2 + mean4 / 2) < deviation_stepSize or counteval[-1] >= p[
-                                'maxEval'] - p['popSize'] - lastEval:
-                                # check if volume approximation allows for adadatation of hitting Probability
+                        if np.abs(mean1 - mean2) / (mean1 / 2 + mean2 / 2) < deviation_stepSize and np.abs(
+                                mean3 - mean4) / (mean3 / 2 + mean4 / 2) < deviation_stepSize or counteval[-1] >= p[
+                            'maxEval'] - p['popSize'] - lastEval:
+                            # check if volume approximation allows for adadatation of hitting Probability
 
-                                try:
-                                    iidx1 = cntAccGen[cntAccGen <= (countgeneration - meanSize_VolApproxGen), 0][-1]
-                                except:
-                                    if not iidx1:
-                                        iidx1 = 1
-                                try:
-                                    iidx2 = cntAccGen[cntAccGen <= (countgeneration - 1), 0][-1]
-                                except:
-                                    if not iidx2:
-                                        iidx2 = 1
+                            try:
+                                iidx1 = np.where(cntAccGen[cntAccGen <= (countgeneration - meanSize_VolApproxGen)])[0][-1]
+                            except:
+                                iidx1 = 1
+                            try:
+                                iidx2 =  np.where(cntAccGen[cntAccGen <= (countgeneration - 1)])[0][-1]
+                            except:
+                                iidx2 = 1
 
-                                x1 = xAcc[0:iidx1]
-                                x2 = xAcc[0:iidx2]
+                            x1 = xAcc[0:iidx1]
+                            x2 = xAcc[0:iidx2]
 
-                                if x1.shape[0] > 1 and x2.shape[0] > 1:
-                                    epsLJ = 1e1
+                            if x1.shape[0] > 1 and x2.shape[0] > 1:
+                                epsLJ = 1e1
 
-                                    # loewner of x1
-                                    e = lowner(x1.T, epsLJ)
-                                    c_loewner = np.linalg.inv(e)
-                                    vol_loewner_x1 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
-                                    # loewner of x2
-                                    e = lowner(x2.T, epsLJ)
-                                    c_loewner = np.linalg.inv(e)
-                                    vol_loewner_x2 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
+                                # loewner of x1
+                                e = lowner(x1.T, epsLJ)
+                                c_loewner = np.linalg.inv(e)
+                                vol_loewner_x1 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
+                                # loewner of x2
+                                e = lowner(x2.T, epsLJ)
+                                c_loewner = np.linalg.inv(e)
+                                vol_loewner_x2 = vol_lp(self.N, 1, 2) * np.sqrt(np.abs(np.linalg.det(c_loewner)))
 
-                                    # axis alligned bounding box x1
-                                    mini = np.min(x1)
-                                    maxi = np.max(x1)
-                                    vol_bb_x1 = np.prod(abs(maxi - mini))
+                                # axis alligned bounding box x1
+                                mini = np.min(x1)
+                                maxi = np.max(x1)
+                                vol_bb_x1 = np.prod(abs(maxi - mini))
 
-                                    # axis alligned bounding box x2
-                                    mini = np.min(x2)
-                                    maxi = np.max(x2)
-                                    vol_bb_x2 = np.prod(abs(maxi - mini))
+                                # axis alligned bounding box x2
+                                mini = np.min(x2)
+                                maxi = np.max(x2)
+                                vol_bb_x2 = np.prod(abs(maxi - mini))
 
-                                    if (np.abs(vol_loewner_x1 - vol_loewner_x2) / (
-                                            vol_loewner_x1 / 2 + vol_loewner_x2 / 2) < deviation_VolApprox and np.abs(
-                                        vol_bb_x1 - vol_bb_x2) / (
-                                                vol_bb_x1 / 2 + vol_bb_x2 / 2) < deviation_VolApprox) or counteval[
-                                        -1] >= p['maxEval'] - p['popSize'] - lastEval:
+                                if (np.abs(vol_loewner_x1 - vol_loewner_x2) / (
+                                        vol_loewner_x1 / 2 + vol_loewner_x2 / 2) < deviation_VolApprox and np.abs(
+                                    vol_bb_x1 - vol_bb_x2) / (
+                                            vol_bb_x1 / 2 + vol_bb_x2 / 2) < deviation_VolApprox) or counteval[
+                                    -1] >= p['maxEval'] - p['popSize'] - lastEval:
 
-                                        # save r, Q, hitP
-                                        if cntAdapt > 1:
-                                            numLastVec = np.arange(np.ceil(cntGenVec[cntAdapt - 1] + (
-                                                        vcountgeneration - cntGenVec[cntAdapt - 1]) * (
-                                                                                       1 - self.opts.hitP_adapt[
-                                                                                   'meanOfLast'])),
-                                                                   vcountgeneration + 1)
+                                    # save r, Q, hitP
+                                    if cntAdapt > 1:
+                                        numLastVec = np.arange(np.ceil(cntGenVec[cntAdapt - 1] + (
+                                                vcountgeneration - cntGenVec[cntAdapt - 1]) * (
+                                                                               1 - self.opts.hitP_adapt[
+                                                                           'meanOfLast'])).astype('int'),
+                                                               vcountgeneration + 1)
+                                    else:
+                                        numLastVec = np.arange(vcountgeneration - np.floor(
+                                            vcountgeneration * self.opts.hitP_adapt['meanOfLast']).astype('int') + 1,
+                                                               vcountgeneration)
+
+                                    muLastVec[cntAdapt] = np.mean(muLast[numLastVec,:])
+                                    rLastVec[cntAdapt] = np.mean(rLast[numLastVec])
+                                    qLastCell = Q
+                                    iterVec[cntAdapt] = counteval[-1]
+                                    cntGenVec[cntAdapt] = countgeneration
+
+                                    hitPLastVec[cntAdapt] = p['p_empWindow']
+                                    sizeLastVec[cntAdapt] = vcountgeneration
+                                    approxVolVec[cntAdapt] = p['p_empWindow'] * vol_lp(self.N, rLastVec[cntAdapt],
+                                                                                       p['pn'])
+
+                                    if cntAdapt < p['lpVec'] and counteval[-1] < p['maxEval'] - p[
+                                        'popSize'] - lastEval:
+                                        if cntAdapt >= 2 and np.abs(approxVolVec[cntAdapt - 1]) - approxVolVec[
+                                            cntAdapt] / (approxVolVec[cntAdapt - 1] / 2 + approxVolVec[
+                                            cntAdapt] / 2) < deviation_stop:
+                                            print('break loop because approximated volume does not change anymore')
+                                            stopFlag = 'no change in ApproxVol anymore'
+                                            print('cntAdapt: ', cntAdapt, '\n p[\'lpVec\']: ', p['lpVec'],
+                                                  '\n counteval:', counteval, '\n p[\'maxEval\']: ', p['maxEval'],
+                                                  '\n lastEval: ', lastEval)
+                                            break
                                         else:
-                                            numLastVec = np.arange(vcountgeneration - np.floor(
-                                                vcountgeneration * self.opts.hitP_adapt['meanOfLast']) + 1,
-                                                                   vcountgeneration)
-
-                                        
+                                            print('________________________________')
+                                            print('changing pVal')
 
 
+                                            cntAdapt += 1
+                                            p['valP'] = p['pVec'][cntAdapt]
+                                            PopSizeOld = p['popSize']
+                                            p['popSize'] = oh.get_Pop_size(p).astype('int')
+                                            print('new pVal: ',p['valP'])
+                                            print('________________________________')
+                                            if countgeneration % savingModuloGen != 0:
+                                                PopSizeOld = p['popSize']
 
+                                            meanSize_stepSizeGen = np.ceil(oh.get_stepSize_mean(p) / p['popSize'])
+                                            meanSize_VolApproxGen = np.ceil(oh.get_volApprox_mean(p) / p['popSize'])
+                                            meanSize_hitPGen = np.ceil(
+                                                self.opts.hitP_adapt['hitP']['meanSize'] / p['popSize'])
+                                            testEveryGen = np.ceil(self.opts.hitP_adapt['testEvery'] / p['popSize'])
+                                            testStartGen = np.ceil(self.opts.hitP_adapt['testStart'] / p['popSize'])
 
+                                            if testStartGen < 2 * max([meanSize_stepSizeGen, meanSize_VolApproxGen,
+                                                                       meanSize_hitPGen]):
+                                                testStartGen = 2 * max(
+                                                    [meanSize_stepSizeGen, meanSize_VolApproxGen, meanSize_hitPGen])
+
+                                            print('testStartGen: ',testStartGen)
+
+                                            #reinit
+                                            p['mueff'] = 1
+                                            pc = np.zeros(shape=(self.N,1))
+                                            p['ccov1'] = oh.get_ccov1(p)
+                                            p['ccovmu'] = oh.get_ccovmu(p)
+
+                                            p['beta'] = oh.get_beta(p)
+                                            p['ss'] = oh.get_ss(p)
+                                            p['sf'] = oh.get_sf(p)
+                                            p['N_mu'] = oh.get_N_mu(p)
+                                            p['N_C'] = self.opts.N_C # only depending on N, so it should stay the same
+
+                                            ccov1Vec[cntAdapt] = p['ccov1']
+                                            ccovmu_Vec[cntAdapt] = p['ccovmu']
+                                            n_MuVec[cntAdapt] = p['N_mu']
+                                            betaVec[cntAdapt] = p['beta']
+                                            ssVec[cntAdapt] = p['ss']
+                                            sfVec[cntAdapt] = p['sf']
+                                            popSizeVec[cntAdapt] = p['popSize']
+
+                                            vcounteval = [1]
+                                            vNumAcc = 1
+                                            van = 1
+                                            p['windowSize'] = np.ceil(oh.get_windowSizeEval(p)/p['popSize']).astype('int')
+
+                                    else:
+                                        print('break loop because ~ cntAdapt < lPVec && counteval < opts.MaxEval-PopSize-lastEval')
+                                        stopFlag = 'maxcounteval or all hitP (from PVec) tested'
+                                        print('cntAdapt: ', cntAdapt, '\n p[\'lpVec\']: ', p['lpVec'],
+                                              '\n counteval:', counteval, '\n p[\'maxEval\']: ', p['maxEval'],
+                                              '\n lastEval: ', lastEval)
+                                        break
             else:
                 cntEvalWindow = min(counteval[-1], p['windowSize'] * p['popSize'])
                 p['p_empAll'] = numAcc / counteval[-1]
@@ -556,9 +643,8 @@ class LpAdaption:
             # Adapt step size, (ball radius r)
             # Depends on the number of feasable Points,
             # Pseudo code line 15
-            r = r * p['ss'] ** numfeas * p['sf'] ** (p['popSize'] - numfeas)
-            r = max(min(r, p['rMax']), p['rMin'])
-            p['r'] = r
+            p['r'] = p['r'] * p['ss'] ** numfeas * p['sf'] ** (p['popSize'] - numfeas)
+            p['r'] = max(min(p['r'], p['rMax']), p['rMin'])
             # Adapt mu
             mu_old = mu
             # if feasable points found, adapt mean and finally proposal distribution...
@@ -645,8 +731,8 @@ class LpAdaption:
 
                     eigVals[eigVals < 0] = 1e-3
                     Q = eigVecs.dot(np.transpose(eigVecs).dot(eigVals))
-                    C = r ** 2 * (Q @ np.transpose(Q))
-                    print('r: ', r, '\n',
+                    C = p['r'] ** 2 * (Q @ np.transpose(Q))
+                    print('r: ', p['r'], '\n',
                           'alpha_i: ', alphai, '\n',
                           'alpha0: ', alpha0, '\n',
                           'mu_old: ', mu_old, '\n',
@@ -683,9 +769,9 @@ class LpAdaption:
                     # save r, mu and possible Q only one each iteration (all candidate solutions are sampled from same distribution)
                     if (self.isbSavingOn and (countgeneration % savingModuloGen) == 0) or counteval[-1] > (
                             p['maxEval'] - p['popSize'] - lastEval):
-                        rVec[saveIndGeneration] = r
+                        rVec[saveIndGeneration] = p['r']
                         muVec[saveIndGeneration] = mu.reshape(self.N, )
-                        volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, r, p['pn'])
+                        volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N,p['r'], p['pn'])
                         cntVec[saveIndGeneration] = counteval[-1]
 
                         # save evaluation number for which r, mu (Q) are stored
@@ -716,8 +802,8 @@ class LpAdaption:
                 if countgeneration % verboseModuloGen == 0:
                     print('________________________________________________________________________________')
                     print('    Number of Iterations: %d' % counteval[-1])
-                    print('    P_accAll (Acceptance probability): ', p['p_empWindow'][0])
-                    print('    Search radius: %d' % p['r'])
+                    print('    P_accAll (Acceptance probability): ', p['p_empWindow'])
+                    print('    Search radius: ', p['r'])
 
         # Save Final outputs
 
@@ -754,7 +840,7 @@ class LpAdaption:
             out['stopFlagCell'] = stopFlag
 
             if not self.opts.hitP_adapt_cond:
-                r = np.mean(rLast[0:saveIndLast])
+                p['r'] = np.mean(rLast[0:saveIndLast])
                 mu = np.mean(muLast[0:saveIndLast])
             else:  # if hitP was adapted
                 adaption = {}
@@ -790,10 +876,10 @@ class LpAdaption:
             # test if mean(last_mu) is in feasable region --> IF REGION is nonconvex this is possible
 
             if self.opts.oracleInopts:
-                oracleOut = self.oracle.oracle(mu, self.opts.oracleInopts)
+                oracleOut = self.oracle(mu, self.opts.oracleInopts)
                 c_T = oracleOut[0]
             else:
-                c_T = self.oracle.oracle(mu)[0]
+                c_T = self.oracle(mu)[0]
 
             if c_T != 1:
                 UserWarning('last mu is not in feasible region!')
