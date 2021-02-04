@@ -264,7 +264,7 @@ class LpAdaption:
             tmp_num = np.ceil(p['maxEval'] / savingModuloGen).astype('int')
             if self.opts.hitP_adapt_cond:
                 # how often hitting probability is changed
-                cntAdapt = 1
+                cntAdapt = 0
                 # save different values for parameter when hitp changes
                 n_MuVec = np.empty(shape=(p['lpVec'], 1))
                 n_MuVec[0] = p['N_mu']
@@ -400,7 +400,7 @@ class LpAdaption:
 
             if self.isPlottingOn and self.isbSavingOn:
                 plot = PlotData()
-                plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N, eigVals, r,
+                plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N, eigVals, p['r'],
                           p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
 
             # ________Oracle_______________
@@ -551,8 +551,8 @@ class LpAdaption:
                                     approxVolVec[cntAdapt] = p['p_empWindow'] * vol_lp(self.N, rLastVec[cntAdapt],
                                                                                        p['pn'])
 
-                                    if cntAdapt < p['lpVec'] and counteval[-1] < p['maxEval'] - p[
-                                        'popSize'] - lastEval:
+                                    if cntAdapt < p['lpVec'] and counteval[-1] < (p['maxEval'] - p[
+                                        'popSize'] - lastEval):
                                         if cntAdapt >= 2 and np.abs(approxVolVec[cntAdapt - 1]) - approxVolVec[
                                             cntAdapt] / (approxVolVec[cntAdapt - 1] / 2 + approxVolVec[
                                             cntAdapt] / 2) < deviation_stop:
@@ -578,8 +578,7 @@ class LpAdaption:
 
                                             meanSize_stepSizeGen = np.ceil(oh.get_stepSize_mean(p) / p['popSize'])
                                             meanSize_VolApproxGen = np.ceil(oh.get_volApprox_mean(p) / p['popSize'])
-                                            meanSize_hitPGen = np.ceil(
-                                                self.opts.hitP_adapt['hitP']['meanSize'] / p['popSize'])
+                                            meanSize_hitPGen = np.ceil(oh.get_hitP_mean(p) / p['popSize'])
                                             testEveryGen = np.ceil(self.opts.hitP_adapt['testEvery'] / p['popSize'])
                                             testStartGen = np.ceil(self.opts.hitP_adapt['testStart'] / p['popSize'])
 
@@ -643,7 +642,7 @@ class LpAdaption:
             # Adapt step size, (ball radius r)
             # Depends on the number of feasable Points,
             # Pseudo code line 15
-            p['r'] = p['r'] * p['ss'] ** numfeas * p['sf'] ** (p['popSize'] - numfeas)
+            p['r'] = np.round(p['r'] * pow(p['ss'],numfeas) * pow(p['sf'],p['popSize'] - numfeas),decimals=4)
             p['r'] = max(min(p['r'], p['rMax']), p['rMin'])
             # Adapt mu
             mu_old = mu
@@ -653,7 +652,7 @@ class LpAdaption:
                 mu = (1 - 1 / p['N_mu']) * mu + (1 / p['N_mu']) * pop @ weights
 
                 # Update evolution paths
-                if sum((invB * (mu - mu_old)) ** 2).any() == 0:
+                if sum((invB @ (mu - mu_old)) ** 2) == 0:
                     z = 0
                 else:
                     alpha0 = p['l_expected'] / np.sqrt(sum((invB @ (mu - mu_old)) ** 2))
@@ -894,7 +893,7 @@ class LpAdaption:
                 Vtest = vol_lp(self.N, r, p['pn']) * out['P_empAll']
                 out['VolTest'] = Vtest
                 out['lastQ'] = Q
-                out['lastR'] = r
+                out['lastR'] = p['r']
                 out['lastMu'] = mu
             else:
                 if self.isbSavingOn:
@@ -905,6 +904,9 @@ class LpAdaption:
             out['P_empWindow'] = p['p_empWindow']
             out['opts'] = self.opts
             out['oracle'] = self.oracle
+
+            print('mu: ',mu)
+            print('r: ',p['r'])
 
             # ____________________Ending Message_________________________________________
             print('     Acceptance probability: ', p['p_empWindow'])

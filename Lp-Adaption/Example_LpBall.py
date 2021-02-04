@@ -35,7 +35,7 @@ class LpBallExample():
             out = l.lpAdaption()
             outCell.append(out)
 
-        volvec = np.empty(shape=(numRep, len(self.optsDict['hitP_adapt']['Pvec'])))
+        volvec = np.empty(shape=(numRep, len(self.optsDict['hitP_adapt']['pVec'])))
         # TODO plotting
 
     def oracle(self, x,inopts):

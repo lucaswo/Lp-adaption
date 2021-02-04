@@ -7,7 +7,7 @@
 
     "hitP_adapt_cond": true,
     "hitP_adapt": {
-        "Pvec": [
+        "pVec": [
             0.35,
             0.15,
             0.06,
