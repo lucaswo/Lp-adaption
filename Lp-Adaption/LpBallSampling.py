@@ -1,7 +1,8 @@
 import numpy as np
 import sklearn
-from scipy.stats import gengamma
+from scipy.stats import gamma
 import random
+import matplotlib.pyplot as plt
 
 
 class LpBall:
@@ -22,21 +23,19 @@ class LpBall:
         :return: uniformly distributed real random vectors from the Lp-Ball
         '''
         # sample from gamma generalized distribution
-        psi = gengamma.rvs(a=(1/self.pnorm), c=1, size=(number,self.dim))
-        psi = [x ** (1 / self.pnorm) for x in psi]
-        psi = np.array(psi)
+        psi = np.random.default_rng().standard_gamma((1/self.pnorm),size=(number,self.dim))
+        psi = psi**(1/self.pnorm)
 
         # generate number x dim random signs for the samples psi to multiply with
         signs = np.random.randint(2, size=(number, self.dim))
         signs[signs == 0] = -1
-        X = np.multiply(psi,signs)
+        X = psi*signs
         # calc z = w^/dim, where w is random variable in [0,1]
         # copy z to dim dimensional array
         z = np.random.rand(number,1) ** (1 / self.dim)
-        i = np.abs(X)**self.pnorm
-        l = np.array(np.sum(np.abs(X) ** self.pnorm,axis=1)**(1. / self.pnorm))
-        m = np.transpose(np.tile(l,(self.dim,1)))
-        y = np.tile(z,(1,self.dim))*(X/m)
+        y = np.tile(z,(1,self.dim))*(X/np.tile(np.sum(np.abs(X)**self.pnorm,axis=1)**(1/self.pnorm),(1,self.dim)).reshape(self.dim,number).T)
         return y
+
+
 
 

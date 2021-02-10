@@ -50,21 +50,21 @@ class LpBallExample():
         """
         pn, r, mu, q = inopts
         if x.shape[1] == 1:
-            xtest = np.linalg.inv(q)/r @ (x - mu)
+            xtest = (np.linalg.inv(q)/r) @ (x - mu)
             if pn > 100:
-                if max(np.abs(xtest)) <= 1:
+                if np.max(np.abs(xtest)) <= 1:
                     return [1]
                 else:
                     return [0]
             else:
-                if sum(np.abs(xtest) ** pn) ** (1 / pn) <= 1:
+                if (np.sum(np.abs(xtest) ** pn) ** (1 / pn)) <= 1:
                     return [1]
                 else:
                     return [0]
         else:
             number = x.shape[1]
             b = (x - np.tile(mu, (1, number)))
-            xtest = np.linalg.inv(q) / b * r
+            xtest = (np.linalg.inv(q) /r) * b
 
             if pn > 100:
                 return [(np.max(np.abs(xtest), axis=1) <= 1).astype('int')]

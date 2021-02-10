@@ -396,7 +396,7 @@ class LpAdaption:
 
             # sampled vectors as input for oracle
             v = np.tile(mu, (1, p['popSize'].astype('int')))
-            arx = np.add(v, p['r'] * (Q @ arz))
+            arx = v + p['r'] * (Q @ arz)
 
             if self.isPlottingOn and self.isbSavingOn:
                 plot = PlotData()
@@ -642,7 +642,7 @@ class LpAdaption:
             # Adapt step size, (ball radius r)
             # Depends on the number of feasable Points,
             # Pseudo code line 15
-            p['r'] = np.round(p['r'] * pow(p['ss'],numfeas) * pow(p['sf'],p['popSize'] - numfeas),decimals=4)
+            p['r'] = p['r'] * pow(p['ss'],numfeas) * pow(p['sf'],p['popSize'] - numfeas)
             p['r'] = max(min(p['r'], p['rMax']), p['rMin'])
             # Adapt mu
             mu_old = mu
@@ -696,8 +696,8 @@ class LpAdaption:
                 if condC < p['condMax'] and condC > 0:
                     detdiagD = np.prod(diagD)  # normalize C
                     diagD = diagD / (detdiagD ** (1 / p['N']))
-                    Q = Bo * np.diag(diagD)
-                    invB = np.diag(1 / diagD) * np.transpose(Bo)
+                    Q = Bo @ np.diag(diagD)
+                    invB = np.diag(1 / diagD) @ np.transpose(Bo)
                 elif (counteval % self.opts.verboseModulo).any() == 0:
                     print('_______________________________________________\n'
                           'Condition of C is too large and regularized \n'
