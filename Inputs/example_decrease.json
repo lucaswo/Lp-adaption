@@ -1,0 +1,28 @@
+{
+    "maxEval": 3e4,
+    "pn": 2,
+    "oracleInopts": [],
+    "nOut": 1,
+    "plotting": true,
+    "verboseModulo": 1000.0,
+    "savingModulo": 1,
+    "hitP_adapt_cond": true,
+    "hitP_adapt": {
+        "Pvec": [
+            0.35,
+            0.20,
+            0.07
+        ],
+        "fixedSchedule": true,
+        "maxEvalSchedule": [
+            0.33333,
+            0.33333,
+            0.33333
+        ],
+        "numLastSchedule": [
+            0.5,
+            0.5,
+            0.5
+        ]
+    }
+}

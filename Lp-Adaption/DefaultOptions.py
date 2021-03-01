@@ -133,7 +133,7 @@ class DefaultOptions:
         self.hitP_adapt['fixedSchedule'] = True
         self.hitP_adapt['maxEvalSchedule'] = [1 / 2, 1 / 8, 1 / 8, 1 / 8, 1 / 8]
         self.hitP_adapt['numLastSchedule'] = [1 / 2, 3 / 4, 3 / 4, 3 / 4, 3 / 4]
-        self.hitP_adapt['testEvery'] = oh.get_hitP_mean(self.__dict__)
+        self.hitP_adapt['testEvery'] = oh.get_hitP_testEvery(self.__dict__)
 
         self.hitP_adapt['stepSize'] = {'meanSize': oh.get_stepSize_mean(self.__dict__), 'deviation': 0.001}
         self.hitP_adapt['hitP'] = {'meanSize': oh.get_hitP_mean(self.__dict__), 'deviation': 0.001}

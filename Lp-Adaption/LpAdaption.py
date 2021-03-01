@@ -251,11 +251,9 @@ class LpAdaption:
                 fc_TVec[0, :] = xstart_out[1:]
 
             # Vector of evaluation indices when everything is saved, first one is one, because xstart is feasable point
-            # TODO: Ist Vector für die Gesamtentscheidungs-Speicherung?
             countVec = np.empty(shape=(np.ceil(p['maxEval'] / self.opts.savingModulo).astype('int') * p['popSize'], 1))
             countVec[0] = 1
 
-            # TODO: in Matlab just a 1x1 cell for double value, init. here usefull?
             stopFlag = None
 
             # settings for CMA/GaA
@@ -293,7 +291,6 @@ class LpAdaption:
             cntVec = np.empty(shape=(tmp_num, 1))
             cntVec[0] = 1
 
-            # TODO Find out if next line of code (comment) is needed, matlab code not sure
             saveIndGeneration = 1
 
             # Vector of step length
@@ -316,7 +313,6 @@ class LpAdaption:
             numMuVec = np.zeros(shape=(p['windowSize'], 1))
 
             # Cell array of Q matrices
-            # TODO: test in the end if len of qcell list is tmp_num
             if self.opts.bSaveCov:
                 qCell = []
                 qCell.append(Q)
@@ -357,7 +353,7 @@ class LpAdaption:
             # save corresponding function evaluations
             cnt_all = np.empty(shape=(np.ceil(p['maxEval'] / p['popSize']).astype('int'), 1))
             cnt_all[0] = 1
-        # gets 1 if change of hitP occurs TODO: relevant, notwendig?
+        # gets 1 if change of hitP occurs
         # Starting indices are one instead of two! Python indices!
         van = 0
         saveInd = 1
@@ -666,7 +662,6 @@ class LpAdaption:
 
             # Adapt Covariance C
             if numfeas > 0 and self.opts.cadapt:  # No adaption of C if now feasable solution in Population
-                # TODO Check calculation at np tile
                 arnorm = np.sqrt(sum((invB @ (pop - np.tile(mu_old, (1, numfeas)))) ** 2, 1))
                 alphai = p['l_expected'] * np.minimum(1. / np.median(arnorm), 2. / (arnorm))
 
@@ -751,8 +746,8 @@ class LpAdaption:
                         saveIndAcc = saveIndAcc + numfeas
 
                     if self.opts.unfeasibleSave:
+                        # if popsize has changed through the algorithm
                         if arx.shape[1] != p['popSize']:
-                            # TODO. check if cntAdapt -1 or not -1
                             numunfeas = popSizeVec[cntAdapt] - numfeas
                         else:
                             numunfeas = p['popSize'] - numfeas
@@ -867,13 +862,7 @@ class LpAdaption:
                 adaption['cnt_all'] = cnt_all
                 out['adaption'] = adaption
 
-            if self.opts.lastSaveAll and self.opts.hitP_adapt_cond:
-                # TODO Find out where this outLast comes from
-                outLast = []
-                out['outlast'] = outLast
-
             # test if mean(last_mu) is in feasable region --> IF REGION is nonconvex this is possible
-
             if self.opts.oracleInopts:
                 oracleOut = self.oracle(mu, self.opts.oracleInopts)
                 c_T = oracleOut[0]

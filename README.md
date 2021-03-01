@@ -17,3 +17,7 @@ LpAdaption(oracle,xstart,inopts)
 ```
 The following parameters have functions instead of constants. 
 Therefore they have to be adapted in the `OptionHandler.py`
+
+## Exectuting Examples
+When running one of the examples in the 'Examples' folder, make sure that your working directory is the 'Lp-Adaption' 
+directory. Otherwise, reference files can't be found 
