@@ -7,11 +7,10 @@ import LpAdaption
 
 class ExampleDecrease():
 
-    def __init__(self, dim: int, pnorm: int, optsFile: str = '../Inputs/example_decrease.json'):
+    def __init__(self, optsFile: str = '../Inputs/example_decrease.json'):
         with open(optsFile) as file:
             self.optsDict = json.load(fp=file)
-        self.dim = dim
-        self.pn = pnorm
+
 
     def lp_adaption(self):
         xstart = np.array([-1, 1])

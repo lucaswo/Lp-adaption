@@ -7,11 +7,11 @@ import LpAdaption
 
 class LpBallExample():
 
-    def __init__(self, dim: int, pnorm: int, optsFile: str = '../Inputs/opts_example.json'):
+    def __init__(self, optsFile: str = '../Inputs/opts_example.json'):
         with open(optsFile) as file:
             self.optsDict = json.load(fp=file)
-        self.dim = dim
-        self.pn = pnorm
+        self.dim = self.optsDict['N']
+        self.pn = self.optsDict['pn']
 
     def lp_adaption(self):
         pn2 = 1
