@@ -13,13 +13,15 @@ class ExampleDecrease():
 
 
     def lp_adaption(self):
-        xstart = np.array([-1, 1])
-        out = LpAdaption.LpAdaption(oracle=self.oracle_heavyTailedStar, xstart=xstart, inopts=self.optsDict)
+        xstart = np.array([[-1],[-1]])
+        l=  LpAdaption.LpAdaption(oracle=self.oracle_heavyTailedStar, xstart=xstart, inopts=self.optsDict)
+        out = l.lpAdaption()
+        #figure
+        #TODO Plot
 
     def oracle_heavyTailedStar(self, x):
         # cast x to an np array fpr the case it's a list
-        x = np.array(x)
-        number,n = x.shape()
+        n,number = x.shape
 
         if n != 2:
             ValueError('Wrong dimension of input')
@@ -34,7 +36,7 @@ class ExampleDecrease():
         q2 = q1
 
         mu3 = np.array([0,b])
-        q3 = np.array([[1,0,][0,a]])
+        q3 = np.array([[1,0],[0,a]])
 
         mu4 = [0,-b]
         q4 = q3
@@ -70,4 +72,7 @@ class ExampleDecrease():
             xtest = np.linalg.inv(q4) / r1 * b
             f4 = np.sum(np.abs(xtest) ** 2) ** 0.5 <= 1
 
-        return f0 and not f1 and not f2 and not f3 and not f4
+        return [f0 and not f1 and not f2 and not f3 and not f4]
+
+l = ExampleDecrease()
+l.lp_adaption()

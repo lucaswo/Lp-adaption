@@ -40,7 +40,7 @@ class LpBallExample():
 
     def oracle(self, x,inopts):
         """
-        :param x: candidate solutions -> matric with column vetors as candidate solutions
+        :param x: candidate solutions -> matrix with column vetors as candidate solutions
         :param np: p-norm of lp ball
         :param r: radius of lp ball
         :param mu: center of lp ball
@@ -71,5 +71,5 @@ class LpBallExample():
             else:
                 return [np.transpose(np.sum(np.abs(xtest) ** pn) ** (1 / pn) <= 1).astype('int')]
 
-l = LpBallExample(dim=3,pnorm=2)
+l = LpBallExample()
 l.lp_adaption()
