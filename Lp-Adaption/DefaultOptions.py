@@ -34,7 +34,7 @@ class DefaultOptions:
         self.nOut = 1
 
         # Plot results: for irst tests off, TODO: Set default 'on' if plotting is available
-        self.plotting = False
+        self.plotting = True
 
         # After wich iteration one want to have a message from Commandline.
         # MaxEval % verbosemodulo == 0

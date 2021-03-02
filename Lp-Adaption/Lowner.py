@@ -36,7 +36,7 @@ def lowner(a,tol):
     F = khachiyan(np.vstack((a,np.ones(shape=(1,m)))),tol)
     A = F[0:n,0:n]
     b = F[0:n,-1].reshape(n,1)
-    c = np.linalg.lstsq(-A, b)[0].reshape(n,1)
+    c = np.linalg.lstsq(-A, b,rcond=None)[0].reshape(n,1)
     E = A/((1-c.T)@b.reshape(n,1)-F[-1,-1])
 
     ac = a - np.tile(c,(1,m))

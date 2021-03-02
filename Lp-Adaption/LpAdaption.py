@@ -1,16 +1,15 @@
-import numpy as np
-from typing import List, Dict
-import re
-from DefaultOptions import DefaultOptions
 import json
-from scipy.sparse.linalg import arpack
-from Inputs import Oracles
-from Vol_lp import vol_lp
+import re
+from typing import List
+
+import OptionHandler as oh
+import matplotlib.pyplot as plt
+import numpy as np
+from DefaultOptions import DefaultOptions
+from Lowner import lowner
 from LpBallSampling import LpBall
 from PlotData import PlotData
-from numpy import matlib
-import OptionHandler as oh
-from Lowner import lowner
+from Vol_lp import vol_lp
 
 
 class LpAdaption:
@@ -229,6 +228,9 @@ class LpAdaption:
             cntAcc = np.empty(shape=(int(p['maxEval']), 1))
 
             cntAcc[0] = 1
+            if self.isPlottingOn:
+                plot = PlotData(self.N)
+                #clear diagram before new use
 
             # oracle output is a vector out of 0s and 1s
             if p['nOut'] > 1:
@@ -243,7 +245,7 @@ class LpAdaption:
                     fxNotAcc = np.empty(shape=(int(p['maxEval']), p['nOut'] - 1))
 
             # Vector, if sample was accepted or not
-            #len can not be calculated easily, because the popSize changes through algorithm and so the number of values saved in here
+            # len can not be calculated easily, because the popSize changes through algorithm and so the number of values saved in here
             c_TVec = []
             c_TVec.append(xstart_out[0])
 
@@ -293,7 +295,7 @@ class LpAdaption:
             cntVec = np.empty(shape=(tmp_num, 1))
             cntVec[0] = 1
 
-            saveIndGeneration = 1
+            saveIndGeneration = 2
 
             # Vector of step length
             rVec = np.zeros(shape=(tmp_num, 1))
@@ -397,10 +399,10 @@ class LpAdaption:
             arx = v + p['r'] * (Q @ arz)
 
             if self.isPlottingOn and self.isbSavingOn:
-                plot = PlotData()
-                plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N, eigVals,
-                          p['r'],
-                          p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
+                if countgeneration % verboseModuloGen == 0:
+                    plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N,
+                              eigVals, p['r'],
+                              p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
 
             # ________Oracle_______________
             # vector of oracle decisions for Popsize samples
@@ -472,7 +474,7 @@ class LpAdaption:
                             sizeLastVec[cntAdapt] = np.floor(numLast_Part / p['popSize'])
                             approxVolVec[cntAdapt] = p['p_empWindow'] * vol_lp(p['N'], rLastVec[cntAdapt], p['pn'])
 
-                            if cntAdapt < p['lpVec']-1:
+                            if cntAdapt < p['lpVec'] - 1:
                                 print('______________changing pVal_______________')
                                 # restart with new hitP
                                 cntAdapt += 1
@@ -503,9 +505,9 @@ class LpAdaption:
                                 maxEval_Part = np.floor(p['maxEvalSchedule'][cntAdapt] * self.opts.maxEval)
                                 numLastPart = np.ceil(p['numLastSchedule'][cntAdapt] * maxEval_Part)
 
-                                muLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int')+1, self.N))
-                                rLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int')+1, 1))
-                                p_empLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int')+1, 1))
+                                muLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int') + 1, self.N))
+                                rLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int') + 1, 1))
+                                p_empLast = np.empty(shape=(np.ceil(numLastPart / p['popSize']).astype('int') + 1, 1))
                                 cntsave_Part = 1
 
                                 vcounteval = [1]
@@ -851,14 +853,14 @@ class LpAdaption:
                                 fc_TVec[saveInd:saveInd + p['popSize'], :] = outArgsMat
                             xRaw[saveInd:saveInd + p['popSize'], :] = arx.T
                             countVec[saveInd:saveInd + p['popSize']] = counteval.reshape(p['popSize'], 1)
-                            saveInd += p['popSize']-1
+                            saveInd += p['popSize'] - 1
                         else:  # if popsize changed with changed hitting probability
                             c_TVec.append(c_T)
                             if p['nOut'] > 1:
                                 fc_TVec[saveInd:saveInd + PopSizeOld, :] = outArgsMat
                             xRaw[saveInd:saveInd + PopSizeOld, :] = arx.T
                             countVec[saveInd:saveInd + PopSizeOld] = counteval.reshape(PopSizeOld, 1)
-                            saveInd += PopSizeOld-1
+                            saveInd += PopSizeOld - 1
                             PopSizeOld = []
 
                 if countgeneration % verboseModuloGen == 0:
@@ -961,6 +963,9 @@ class LpAdaption:
             out['P_empWindow'] = p['p_empWindow']
             out['opts'] = self.opts
             out['oracle'] = self.oracle
+
+            if self.isbSavingOn and self.isbSavingOn:
+                plt.close(plot.fig)
 
             print('mu: ', mu)
             print('r: ', p['r'])

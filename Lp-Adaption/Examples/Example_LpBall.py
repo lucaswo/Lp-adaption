@@ -1,3 +1,7 @@
+import sys
+sys.path.append(".")
+sys.path.append("..")
+
 import numpy as np
 import json
 import Vol_lp
@@ -5,9 +9,10 @@ import LpBallSampling
 import LpAdaption
 
 
+
 class LpBallExample():
 
-    def __init__(self, optsFile: str = '../Inputs/opts_example.json'):
+    def __init__(self, optsFile: str = '../../Inputs/opts_example.json'):
         with open(optsFile) as file:
             self.optsDict = json.load(fp=file)
         self.dim = self.optsDict['N']
