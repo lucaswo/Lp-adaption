@@ -47,10 +47,10 @@ class ExampleDecrease():
         # if only one point is given
         if number == 1:
             f0 = (np.sum(np.power(np.abs(0.5 * x), 2)) ** 0.5) <= 1
-            f1 = (np.sum(np.abs(np.linalg.inv(q1) / r1 * (x - mu1).T)) ** 0.5) <= 1
-            f2 = (np.sum(np.abs(np.linalg.inv(q2) / r1 * (x - mu2).T)) ** 0.5) <= 1
-            f3 = (np.sum(np.abs(np.linalg.inv(q3) / r1 * (x - mu3).T)) ** 0.5) <= 1
-            f4 = (np.sum(np.abs(np.linalg.inv(q4) / r1 * (x - mu4).T)) ** 0.5) <= 1
+            f1 = (np.sum(np.abs(np.linalg.inv(q1) / r1 * (x - mu1))**2) ** 0.5) <= 1
+            f2 = (np.sum(np.abs(np.linalg.inv(q2) / r1 * (x - mu2))**2) ** 0.5) <= 1
+            f3 = (np.sum(np.abs(np.linalg.inv(q3) / r1 * (x - mu3))**2) ** 0.5) <= 1
+            f4 = (np.sum(np.abs(np.linalg.inv(q4) / r1 * (x - mu4))**2) ** 0.5) <= 1
         else:
             x1 = x.T
             f0 = (np.sum(np.power(np.abs(0.5 * x1), 2), axis=1) ** 0.5).T <= 1

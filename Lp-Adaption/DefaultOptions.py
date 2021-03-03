@@ -36,6 +36,8 @@ class DefaultOptions:
         # Plot results: for irst tests off, TODO: Set default 'on' if plotting is available
         self.plotting = True
 
+        self.aggplot = True
+
         # After wich iteration one want to have a message from Commandline.
         # MaxEval % verbosemodulo == 0
         self.verboseModulo = int(1e3)

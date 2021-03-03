@@ -10,6 +10,9 @@ from Lowner import lowner
 from LpBallSampling import LpBall
 from PlotData import PlotData
 from Vol_lp import vol_lp
+import warnings
+
+warnings.filterwarnings('error')
 
 
 class LpAdaption:
@@ -229,8 +232,11 @@ class LpAdaption:
 
             cntAcc[0] = 1
             if self.isPlottingOn:
-                plot = PlotData(self.N)
-                #clear diagram before new use
+                plot = PlotData(self.N, name='current Repition')
+
+                if self.opts.aggplot and not 'global_aggplot' in globals():
+                    global global_aggplot
+                    global_aggplot = PlotData(self.N, name='aggregated Plot of Repititions')
 
             # oracle output is a vector out of 0s and 1s
             if p['nOut'] > 1:
@@ -403,6 +409,11 @@ class LpAdaption:
                     plot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen, self.N,
                               eigVals, p['r'],
                               p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
+                    if self.opts.aggplot:
+                        global_aggplot.plot(cntVec, countgeneration, saveIndGeneration, muVec, rVec, verboseModuloGen,
+                                            self.N,
+                                            eigVals, p['r'],
+                                            p_empVecAll, p_empVecWindow, p['p_empAll'], p['p_empWindow'])
 
             # ________Oracle_______________
             # vector of oracle decisions for Popsize samples
@@ -458,7 +469,7 @@ class LpAdaption:
 
                 if self.opts.hitP_adapt['fixedSchedule']:
                     if vcounteval[-1] > (maxEval_Part - numLast_Part):
-                        muLast[cntsave_Part] = mu.reshape(2, )
+                        muLast[cntsave_Part] = mu.reshape(self.N, )
                         rLast[cntsave_Part] = p['r']
                         p_empLast[cntsave_Part] = p['p_empWindow']
 
@@ -713,9 +724,9 @@ class LpAdaption:
             # Adapt mu
             mu_old = mu
             # if feasable points found, adapt mean and finally proposal distribution...
-            if numfeas != 0 and self.opts.madapt:
+            if numfeas > 0 and self.opts.madapt:
                 # adapt mean, pseudo code line 17
-                mu = (1 - 1 / p['N_mu']) * mu + (1 / p['N_mu']) * pop @ weights
+                mu = (1 - 1 / p['N_mu']) * mu + 1/p['N_mu'] * pop @ weights
 
                 # Update evolution paths
                 if sum((invB @ (mu - mu_old)) ** 2) == 0:
@@ -728,16 +739,17 @@ class LpAdaption:
                 z = 0
 
             pc = (1 - p['cp']) * pc + np.sqrt(p['cp'] * (2 - p['cp'])) * z
-            s = pc * np.transpose(pc)
+            s = pc @ pc.T
 
             # Adapt Covariance C
-            if numfeas > 0 and self.opts.cadapt:  # No adaption of C if now feasable solution in Population
+            if numfeas > 0 and self.opts.cadapt:  # No adaption of C if no feasable solution in Population
                 arnorm = np.sqrt(sum((invB @ (pop - np.tile(mu_old, (1, numfeas)))) ** 2, 1))
+
                 alphai = p['l_expected'] * np.minimum(1. / np.median(arnorm), 2. / (arnorm))
 
                 if not self.opts.madapt or not np.isfinite(alpha0.any()):
                     alpha0 = 1
-                alphai[np.isfinite(alphai).all()] = 1
+                alphai[~np.isfinite(alphai).all()] = 1
 
                 zmu = np.tile(alphai, (self.N, 1)) * (pop - np.tile(mu_old, (1, numfeas)))
                 cmu = zmu @ np.diag(weights.reshape(numfeas, )) @ np.transpose(zmu)
@@ -760,9 +772,9 @@ class LpAdaption:
 
                 if condC < p['condMax'] and condC > 0:
                     detdiagD = np.prod(diagD)  # normalize C
-                    diagD = diagD / (detdiagD ** (1 / p['N']))
+                    diagD = diagD/detdiagD ** (1 / p['N'])
                     Q = Bo @ np.diag(diagD)
-                    invB = np.diag(1 / diagD) @ np.transpose(Bo)
+                    invB = np.diag(1 / diagD) @ Bo.T
                 elif (counteval % self.opts.verboseModulo).any() == 0:
                     print('_______________________________________________\n'
                           'Condition of C is too large and regularized \n'
@@ -771,7 +783,7 @@ class LpAdaption:
                     Q = Q + (1 / self.N) * np.eye(self.N, self.N)
 
                 # Update Condition of C
-                QQ = Q @ np.transpose(Q)
+                QQ = Q @ Q.T
 
                 try:
                     eigVals, eigVecs = np.linalg.eig(QQ)
@@ -834,7 +846,7 @@ class LpAdaption:
                     if (self.isbSavingOn and countgeneration % savingModuloGen == 0) or counteval[-1] > (
                             p['maxEval'] - p['popSize'] - lastEval):
                         rVec[saveIndGeneration] = p['r']
-                        muVec[saveIndGeneration] = mu.reshape(self.N, )
+                        muVec[saveIndGeneration] = mu.reshape(self.N,)
                         volVec[saveIndGeneration] = np.abs(np.linalg.det(Q)) * vol_lp(self.N, p['r'], p['pn'])
                         cntVec[saveIndGeneration] = counteval[-1]
 
@@ -949,7 +961,7 @@ class LpAdaption:
             if not self.opts.hitP_adapt_cond:
                 out['P_empAll'] = numAcc / counteval[-1]
 
-                Vtest = vol_lp(self.N, r, p['pn']) * out['P_empAll']
+                Vtest = vol_lp(self.N, p['r'], p['pn']) * out['P_empAll']
                 out['VolTest'] = Vtest
                 out['lastQ'] = Q
                 out['lastR'] = p['r']
@@ -964,8 +976,13 @@ class LpAdaption:
             out['opts'] = self.opts
             out['oracle'] = self.oracle
 
-            if self.isbSavingOn and self.isbSavingOn:
+            if self.isbSavingOn and self.isPlottingOn:
                 plt.close(plot.fig)
+                if self.opts.aggplot:
+                    global_aggplot.lastsave = 1
+                    global_aggplot.last_ind = 0
+                    global_aggplot.lasteigvals = np.ones(shape=(self.N, 1))
+                    global_aggplot.fig.show()
 
             print('mu: ', mu)
             print('r: ', p['r'])

@@ -20,7 +20,8 @@ def get_ccov1(p:Dict):
     return 3*0.2/((p['N']+1.3)**2+p['mueff'])
 
 def get_ccovmu(p:Dict):
-    return min(1-p['ccov1'], 3*0.2*(p['mueff']-2+1/p['mueff']) / ((p['N']+2)**2+p['mueff']*0.2))
+    np.seterr(divide='ignore', invalid='ignore')
+    return min(1-p['ccov1'], np.divide(3*0.2*np.divide(p['mueff']-2+1,p['mueff']) , ((p['N']+2)**2+p['mueff']*0.2)))
 
 def get_N_mu(p:dict):
     return np.exp(1)*p['N']
@@ -35,7 +36,7 @@ def get_ss(p:dict):
     return 1 + p['beta']*(1-p['valP'])
 
 def get_sf(p:dict):
-    return 1 - p['beta']*p['valP']
+    return 1 - p['beta']*(p['valP'])
 
 def get_cp(p:dict):
     return 1/np.sqrt(p['N'])
