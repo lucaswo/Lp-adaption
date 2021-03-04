@@ -2,6 +2,7 @@
 Algorithm from: J. Asmus, C. L. Mueller and I. F. Sbalzarini. Lp-Adaptation: Simultaneous 
 Design Centering and Robustness Estimation of Electronic and Biological
 Systems. Scientific Reports 2017
+Reimplementaion of the MATLAB Version.
 
 ## Requirements
 The Lp-Adaption needs just a few modules, that can be found here in the `requirements.txt`. You can istall them via 
@@ -71,7 +72,7 @@ for the calculation (`OptionHandler.py`).
 
 ### List of constant values
 An Example for such a json file can be found in the Inputs directory. You can use it directly as a template.
-The default Parameters can be found in the `options_default.json` in the input Directory
+The default Parameters can be found in the `options_default.json` in the input Directory or the  `DefaultOptions.py`
 The following Parameters are defined:
 - **"N"**: Int, Dimension
 - **"maxEval"**: Int maximum number of function evaluations
@@ -88,7 +89,7 @@ The following Parameters are defined:
 - **"valP"**:float, Hitting Probability
 - **"maxMeanSize"**: Int, upper bound on inverval's size over which averaging happens
 - **"r"**: float, starting radius
-- **"initQ", List, Starting Q Matrix
+- **"initQ"**, List, Starting Q Matrix
 - **"initC"**:list, Starting C Matrix
 - **"maxR"**: "np.inf", Maximum radius
 - **"minR"**: 0, min Radius
