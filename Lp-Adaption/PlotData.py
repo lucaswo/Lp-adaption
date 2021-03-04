@@ -32,6 +32,7 @@ class PlotData():
         self.axs[1,0].plot(currindices,P_empVecWindow[currsaves],c = 'red')
         self.axs[1,0].plot(currindices,P_empVecAll[currsaves],c='blue')
         self.axs[1,0].set_title('Current acceptace Probability all: window(red)')
+        self.axs[1,0].grid(True)
 
         self.axs[1, 1].grid(True)
         self.axs[1,1].set_yscale('log')

@@ -990,3 +990,5 @@ class LpAdaption:
             # ____________________Ending Message_________________________________________
             print('     Acceptance probability: ', p['p_empWindow'])
             print('     Stop Flag: %s' % stopFlag)
+
+            return out

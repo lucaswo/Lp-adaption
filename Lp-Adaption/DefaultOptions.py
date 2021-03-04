@@ -27,7 +27,7 @@ class DefaultOptions:
         # Pnorm
         self.pn = 2
 
-        # ???
+        # additional inputs for the oracle
         self.oracleInopts = []
 
         # number of outputs from the oracle (first has to be 0/1), later more values possible
@@ -36,7 +36,7 @@ class DefaultOptions:
         # Plot results: for irst tests off, TODO: Set default 'on' if plotting is available
         self.plotting = True
 
-        self.aggplot = True
+        self.aggplot = False
 
         # After wich iteration one want to have a message from Commandline.
         # MaxEval % verbosemodulo == 0

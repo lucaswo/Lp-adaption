@@ -5,15 +5,15 @@ Collection of functions for parameters that have to be calculated from other opt
 Any parameter, that has to be evaluated from others, should be mentioned here
 '''
 #TODO: if the user wants to use a new function, then he/she has to declare the function here and in the opts json with str 'optionhandler'
-def get_numLast(parameters:Dict):
-    num_last = max((parameters['maxEval'] - 1e3 * parameters['N']), parameters['maxEval'] * 0.7)
+def get_numLast(p:Dict):
+    num_last = max((p['maxEval'] - 1e3 * p['N']), p['maxEval'] * 0.7)
     return num_last
 
-def get_windowSizeEval(parameters:Dict):
-    windowSizeEval = min(110/parameters['valP'],parameters['maxMeanSize'])
+def get_windowSizeEval(p:Dict):
+    windowSizeEval = min(110/p['valP'],p['maxMeanSize'])
     return windowSizeEval
 
-def get_maxR(parameters:Dict):
+def get_maxR(p:Dict):
     return np.inf
 
 def get_ccov1(p:Dict):
