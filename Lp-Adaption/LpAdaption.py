@@ -427,7 +427,7 @@ class LpAdaption:
                 else:
                     outArgs = np.array(self.oracle(arx[:, s].reshape(self.N, 1)))
 
-                outArgs = 1 * outArgs
+                #outArgs = 1 * outArgs
                 c_T[s] = outArgs[0]
                 if p['nOut'] > 1:
                     if np.any(outArgs):

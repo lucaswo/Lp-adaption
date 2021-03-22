@@ -8,7 +8,6 @@ import numpy as np
 
 
 
-
 class ExampleDecrease():
 
     def __init__(self, optsFile: str = '../Inputs/example_decrease.json'):
@@ -19,8 +18,7 @@ class ExampleDecrease():
         xstart = np.array([[-1], [-1]])
         l = LpAdaption.LpAdaption(oracle=self.oracle_heavyTailedStar, xstart=xstart, inopts=self.optsDict)
         out = l.lpAdaption()
-        # figure
-        # TODO Plot
+
 
     def oracle_heavyTailedStar(self, x):
         # cast x to an np array fpr the case it's a list

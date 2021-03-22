@@ -31,11 +31,12 @@ class PlotData():
 
         self.axs[1,0].plot(currindices,P_empVecWindow[currsaves],c = 'red')
         self.axs[1,0].plot(currindices,P_empVecAll[currsaves],c='blue')
-        self.axs[1,0].set_title('Current acceptace Probability all: window(red)')
+        self.axs[1,0].set_title('Current acceptance \n Probability all: window(red)')
         self.axs[1,0].grid(True)
 
         self.axs[1, 1].grid(True)
         self.axs[1,1].set_yscale('log')
+        self.axs[1, 1].set_title('Condition of C')
 
 
         self.axs[1, 1].plot([self.last_ind,currind], [(1 / np.sort(self.lasteigvals)).reshape(N,), 1 / np.sort(eigVals)])
