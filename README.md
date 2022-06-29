@@ -1,37 +1,31 @@
-# Lp-Adaption
-Algorithm from: J. Asmus, C. L. Mueller and I. F. Sbalzarini. Lp-Adaptation: Simultaneous 
-Design Centering and Robustness Estimation of Electronic and Biological
-Systems. Scientific Reports 2017
-Reimplementaion of the MATLAB Version.
+# L<sub>p</sub>-Adaption
+Python implementation of the MATLAB Version from:  
+[Asmus, J., Müller, C.L. & Sbalzarini, I.F. L<sub>p</sub>-Adaptation: Simultaneous Design Centering and Robustness Estimation of Electronic and Biological Systems. _Sci Rep_ 7, 6660 (2017).](https://www.nature.com/articles/s41598-017-03556-5)
 
 ## Requirements
-The Lp-Adaption needs just a few modules, that can be found here in the `requirements.txt`. You can istall them via 
+The L<sub>p</sub>-Adaption needs just a few modules that can be found here in the `requirements.txt`. You can install them via 
 pip in your selected virtualenv.
 ```shell script
-pip install -r requirements.txt 
+pip3 install -r requirements.txt 
 ```
 
-## Usage of Lp-Adaption
+## Usage of L<sub>p</sub>-Adaption
 
-The Lp-adaption needs an oracle a pnorm and a feasible starting point and the parameter options to calculate a 
-design center.
-The oracle has to be a python function, the starting point a vector in the dimension N and the parameters are given
- as a json file or dictionary for constants and a python file of functions for calculated and recalculated values.
+The L<sub>p</sub>-Adaption needs an oracle, a pnorm, a feasible starting point, and the parameter options to calculate a 
+design center. The oracle has to be a python function, the starting point a vector with N dimensions, and the parameters are given as a json file for constants and a python file of functions for calculated and recalculated values.
  
  ```python
 inopts = 'inopts.json'
 xstart = [1,1]
 LpAdaption(oracle,xstart,inopts)
 ```
-The following parameters have functions instead of constants. 
-Therefore they have to be adapted in the `OptionHandler.py`
 
-## Exectuting Examples
-When running one of the examples in the 'Examples' folder, make sure that your working directory is the 'Lp-Adaption' 
-directory. Otherwise, reference files can't be found 
+## Executing Examples
+When running one of the examples in the 'Lp-Adaption/Examples' folder, make sure that your working directory is the 'Lp-Adaption' 
+directory. Otherwise, referenced files can't be found. 
 
-## Writing your own Lp Adaption 
-It's recommended, to init a new class with your oracle as a class function. 
+## Writing your own L<sub>p</sub>-Adaption 
+It's recommended, to initialize a new class with your oracle as a class function. 
 A template:
 
  ```python
@@ -61,61 +55,58 @@ class LpBallExample():
 l = LpBallExample(dim=3,pnorm=2)
 l.lp_adaption()
 ```
-Note. that there are some Parameters which are calculated and recalculated through the Lp adaption.
+Note. that there are some Parameters which are calculated and recalculated through the L<sub>p</sub>-Adaption.
 You can change these parameters in the `OptionHandler.py` file.
 
-## Changable Parameters
-There are two types of parameters one can adapt for the algorithm. Firstly the  constant values. They can be given to the algorithm as a Dictionary
- or a `.json` file respectively.Secondly the 
-calculated values, which may change through the algorithm. Therefore the second type needs a python file with functions 
-for the calculation (`OptionHandler.py`).
+## Changeable Parameters
+There are two types of parameters one can adapt for the algorithm. First, there are the constant values. They can be given to the algorithm as a dictionary or a `.json` file respectively. the second type of parameters are the calculated values, which may be used during run time by the algorithm. Therefore, the second type needs a python file with functions for the calculation (`OptionHandler.py`).
 
-### List of constant values
-An Example for such a json file can be found in the Inputs directory. You can use it directly as a template.
-The default Parameters can be found in the `options_default.json` in the input Directory or the  `DefaultOptions.py`
+### Constant Values
+An example for a json file with constant values can be found in the 'Inputs' directory. You can use it directly as a template.
+The default parameters can be found in `options_default.json` or  `DefaultOptions.py`.
 The following Parameters are defined:
 - **"N"**: Int, Dimension
 - **"maxEval"**: Int maximum number of function evaluations
 - **"pn"**: Int, pnorm 
 - **"nOut"**: Int, output dim
-- **"plotting"**: Bool, Plotting on or off
-- **"verboseModulo"**: After which iteration one want to have a message from Commandline. (MaxEval % verbosemodulo == 0)
-- **"savingModulo"**: int, Save after i-th iteration, maxeval % savingmodulo ==0
-- **"bSaving"**: Bool, Save data to file on/off
-- **"bSaveCov"**: Bool, Save Covaraiance Matrices
-- **"lastSaveAll"**: save all numLast r, mu, Q, P_emp
-- **"unfeasibleSave"**: Bool, save unfeasable Points as well
+- **"plotting"**: Bool, plotting on or off
+- **"verboseModulo"**: log every i-th iteration, MaxEval % verboseModulo == 0
+- **"savingModulo"**: int, save every i-th iteration, MaxEval % savingModulo ==0
+- **"bSaving"**: Bool, save data to file
+- **"bSaveCov"**: Bool, save covariance matrices
+- **"lastSaveAll"**: save all numLast, r, mu, Q, P_emp
+- **"unfeasibleSave"**: Bool, save unfeasible points
 - **"averageCovNum"**: Int, how many of numLast elements are used to get average mu and r
-- **"valP"**:float, Hitting Probability
-- **"maxMeanSize"**: Int, upper bound on inverval's size over which averaging happens
+- **"valP"**: float, hitting probability
+- **"maxMeanSize"**: Int, upper bound for interval over which averaging happens
 - **"r"**: float, starting radius
-- **"initQ"**, List, Starting Q Matrix
-- **"initC"**:list, Starting C Matrix
-- **"maxR"**: "np.inf", Maximum radius
-- **"minR"**: 0, min Radius
+- **"initQ"**, list, starting Q Matrix
+- **"initC"**: list, starting C Matrix
+- **"maxR"**: "np.inf", maximum radius
+- **"minR"**: 0, min radius
 - **"maxCond"**: 2e+20, maximal allowed condition
-- **"N_mu"**: Mean adaptation weight
-- **"N_C"**: Matrix adaptation weight
-- **"hitP_adapt_cond"**: Bool, If hitting probability is adapted or not 
+- **"N_mu"**: mean adaptation weight
+- **"N_C"**: matrix adaptation weight
+- **"hitP_adapt_cond"**: Bool, if hitting probability is adapted or not 
 - **"hitP_adapt"**: 
-    - **"Pvec"**: list, hitting Probability adaption values
-    - **"fixedSchedule"**: Bool,
-    - **"maxEvalSchedule"**: proportion of maxEval
+    - **"Pvec"**: list, hitting probability adaption values
+    - **"fixedSchedule"**: Bool, use fixed schedule for hitting probability adaption
+    - **"maxEvalSchedule"**: proportion of maxEval for schedule
     - **"numLastSchedule"**: over how many samples of each run should be averaged to get radius r and mean mu of found feasible region 
-    (interest if hitP_adapt ==1 and no fixed schedule)
-    - **"testEvery"**: every which iteration it should be tested if step size is in steady state
+    (if hitP_adapt == 1 and no fixed schedule)
+    - **"testEvery"**: every i-th iteration it should be tested if step size is in steady state
     - **"stepSize"**: 
-        - **"deviation"**: float at which deviation to start stepsize adaption
+        - **"deviation"**: float at which deviation to start step size adaption
     - **"hitP"**: 
-        - **"deviation"**: float
+        - **"deviation"**: float at which deviation to start hitting probability adaption
     - **"VolApprox"**:
-        - **"deviation"**: float
-    - **"meanOfLast"**: float, defining how many samples of each run are used for calculating the average if no fixed schedule for the changing of the hitting probability
-    (number between 0 and 1)
-    - **"deviation_stop"**: double
+        - **"deviation"**: float at which deviation to start volume approximation adaption
+    - **"meanOfLast"**: float, defining how many samples of each run are used for calculating the average if there is no fixed schedule for the changing of the hitting probability
+    (between 0 and 1)
+    - **"deviation_stop"**: float stop criteria
 
-## Calculated Values
-List of Calculated Values with their defaults:
+### Calculated Values
+List of calculated values with their defaults:
 - **numLast**:
     ```python 
     num_last = max((p['maxEval'] - **1e3 * p['N']), p['maxEval'] * 0.7)
