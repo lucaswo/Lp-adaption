@@ -1,5 +1,5 @@
 # L<sub>p</sub>-Adaption
-Python implementation of the MATLAB Version from:  
+Python implementation of the MATLAB version from:  
 [Asmus, J., Müller, C.L. & Sbalzarini, I.F. L<sub>p</sub>-Adaptation: Simultaneous Design Centering and Robustness Estimation of Electronic and Biological Systems. _Sci Rep_ 7, 6660 (2017).](https://www.nature.com/articles/s41598-017-03556-5)
 
 ## Requirements
@@ -65,45 +65,45 @@ There are two types of parameters one can adapt for the algorithm. First, there 
 An example for a json file with constant values can be found in the 'Inputs' directory. You can use it directly as a template.
 The default parameters can be found in `options_default.json` or  `DefaultOptions.py`.
 The following Parameters are defined:
-- **"N"**: Int, Dimension
-- **"maxEval"**: Int maximum number of function evaluations
-- **"pn"**: Int, pnorm 
-- **"nOut"**: Int, output dim
-- **"plotting"**: Bool, plotting on or off
-- **"verboseModulo"**: log every i-th iteration, MaxEval % verboseModulo == 0
-- **"savingModulo"**: int, save every i-th iteration, MaxEval % savingModulo ==0
-- **"bSaving"**: Bool, save data to file
-- **"bSaveCov"**: Bool, save covariance matrices
-- **"lastSaveAll"**: save all numLast, r, mu, Q, P_emp
-- **"unfeasibleSave"**: Bool, save unfeasible points
-- **"averageCovNum"**: Int, how many of numLast elements are used to get average mu and r
-- **"valP"**: float, hitting probability
-- **"maxMeanSize"**: Int, upper bound for interval over which averaging happens
-- **"r"**: float, starting radius
-- **"initQ"**, list, starting Q Matrix
-- **"initC"**: list, starting C Matrix
-- **"maxR"**: "np.inf", maximum radius
-- **"minR"**: 0, min radius
-- **"maxCond"**: 2e+20, maximal allowed condition
-- **"N_mu"**: mean adaptation weight
-- **"N_C"**: matrix adaptation weight
-- **"hitP_adapt_cond"**: Bool, if hitting probability is adapted or not 
-- **"hitP_adapt"**: 
-    - **"Pvec"**: list, hitting probability adaption values
-    - **"fixedSchedule"**: Bool, use fixed schedule for hitting probability adaption
-    - **"maxEvalSchedule"**: proportion of maxEval for schedule
-    - **"numLastSchedule"**: over how many samples of each run should be averaged to get radius r and mean mu of found feasible region 
+- **N**: Int, Dimension
+- **maxEval**: Int maximum number of function evaluations
+- **pn**: Int, pnorm 
+- **nOut**: Int, output dim
+- **plotting**: Bool, plotting on or off
+- **verboseModulo**: log every i-th iteration, MaxEval % verboseModulo == 0
+- **savingModulo**: int, save every i-th iteration, MaxEval % savingModulo ==0
+- **bSaving**: Bool, save data to file
+- **bSaveCov**: Bool, save covariance matrices
+- **lastSaveAll**: save all numLast, r, mu, Q, P_emp
+- **unfeasibleSave**: Bool, save unfeasible points
+- **averageCovNum**: Int, how many of numLast elements are used to get average mu and r
+- **valP**: float, hitting probability
+- **maxMeanSize**: Int, upper bound for interval over which averaging happens
+- **r**: float, starting radius
+- **initQ**, list, starting Q Matrix
+- **initC**: list, starting C Matrix
+- **maxR**: np.inf, maximum radius
+- **minR**: 0, min radius
+- **maxCond**: 2e+20, maximal allowed condition
+- **N_mu**: mean adaptation weight
+- **N_C**: matrix adaptation weight
+- **hitP_adapt_cond**: Bool, if hitting probability is adapted or not 
+- **hitP_adapt**: 
+    - **Pvec**: list, hitting probability adaption values
+    - **fixedSchedule**: Bool, use fixed schedule for hitting probability adaption
+    - **maxEvalSchedule**: proportion of maxEval for schedule
+    - **numLastSchedule**: over how many samples of each run should be averaged to get radius r and mean mu of found feasible region 
     (if hitP_adapt == 1 and no fixed schedule)
-    - **"testEvery"**: every i-th iteration it should be tested if step size is in steady state
-    - **"stepSize"**: 
-        - **"deviation"**: float at which deviation to start step size adaption
-    - **"hitP"**: 
-        - **"deviation"**: float at which deviation to start hitting probability adaption
-    - **"VolApprox"**:
-        - **"deviation"**: float at which deviation to start volume approximation adaption
-    - **"meanOfLast"**: float, defining how many samples of each run are used for calculating the average if there is no fixed schedule for the changing of the hitting probability
+    - **testEvery**: every i-th iteration it should be tested if step size is in steady state
+    - **stepSize**: 
+        - **deviation**: float at which deviation to start step size adaption
+    - **hitP**: 
+        - **deviation**: float at which deviation to start hitting probability adaption
+    - **VolApprox**:
+        - **deviation**: float at which deviation to start volume approximation adaption
+    - **meanOfLast**: float, defining how many samples of each run are used for calculating the average if there is no fixed schedule for the changing of the hitting probability
     (between 0 and 1)
-    - **"deviation_stop"**: float stop criteria
+    - **deviation_stop**: float stop criteria
 
 ### Calculated Values
 List of calculated values with their defaults:
